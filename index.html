@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Industrial Atlas UK</title>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header id="app-header">
+    <div class="header-brand">
+      <div class="brand-mark" aria-hidden="true">▦</div>
+      <h1 class="brand-name">Industrial Atlas <span class="brand-country">UK</span></h1>
+    </div>
+    <nav class="mode-nav" aria-label="Discovery modes">
+      <button class="mode-btn" data-mode="workshop-explorer">Workshop Explorer</button>
+      <button class="mode-btn" data-mode="urban-manufacturing">Urban Manufacturing</button>
+      <button class="mode-btn" data-mode="hidden-industry">Hidden Industry</button>
+    </nav>
+    <div class="base-switcher">
+      <button class="base-btn active" data-layer="osm">Map</button>
+      <button class="base-btn" data-layer="satellite">Satellite</button>
+    </div>
+  </header>
+
+  <main id="app-main">
+
+    <aside id="sidebar-left" class="sidebar">
+      <div class="sidebar-scroll">
+
+        <section class="sidebar-section">
+          <div class="search-wrapper">
+            <input type="search" id="search-input"
+              placeholder="Town, city, or postcode…"
+              autocomplete="off" spellcheck="false"
+              aria-label="Search for a place">
+            <button id="search-btn" type="button" aria-label="Search">→</button>
+          </div>
+          <ul id="search-suggestions" class="suggestions" hidden role="listbox" aria-label="Search suggestions"></ul>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="section-heading">Quick Areas</h2>
+          <div class="preset-grid">
+            <button class="preset-btn" data-preset="jewellery-quarter">Jewellery Qtr</button>
+            <button class="preset-btn" data-preset="kelham-island">Kelham Island</button>
+            <button class="preset-btn" data-preset="hackney-wick">Hackney Wick</button>
+            <button class="preset-btn" data-preset="fish-island">Fish Island</button>
+            <button class="preset-btn" data-preset="ancoats">Ancoats</button>
+            <button class="preset-btn" data-preset="digbeth">Digbeth</button>
+            <button class="preset-btn" data-preset="holbeck">Holbeck</button>
+            <button class="preset-btn" data-preset="leicester-textiles">Leicester Textiles</button>
+          </div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="section-heading">Productive Spaces</h2>
+          <div class="filter-list">
+            <label class="filter-row"><input type="checkbox" name="filter" value="workshops"><span class="filter-label">Workshops</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="manufacturing"><span class="filter-label">Manufacturing</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="industrial_buildings"><span class="filter-label">Industrial Buildings</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="warehouses"><span class="filter-label">Warehouses</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="maker_spaces"><span class="filter-label">Maker Spaces</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="railway_arches"><span class="filter-label">Railway Arch Businesses</span></label>
+          </div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="section-heading">Building Types</h2>
+          <div class="filter-list">
+            <label class="filter-row"><input type="checkbox" name="filter" value="bldg_industrial"><span class="filter-label tag">building=industrial</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="bldg_warehouse"><span class="filter-label tag">building=warehouse</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="bldg_workshop"><span class="filter-label tag">building=workshop</span></label>
+          </div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="section-heading">Business &amp; Land Use</h2>
+          <div class="filter-list">
+            <label class="filter-row"><input type="checkbox" name="filter" value="craft_any"><span class="filter-label tag">craft=*</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="industrial_any"><span class="filter-label tag">industrial=*</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="landuse_industrial"><span class="filter-label tag">landuse=industrial</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="landuse_commercial"><span class="filter-label tag">landuse=commercial</span></label>
+          </div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="section-heading">Lifecycle Status</h2>
+          <p class="section-note">Queries OSM tags directly — combine with building filters above for best results.</p>
+          <div class="filter-list">
+            <label class="filter-row lifecycle-row abandoned-row">
+              <input type="checkbox" name="filter" value="abandoned_any">
+              <span class="filter-label tag">abandoned=* / abandoned:*</span>
+              <span class="lifecycle-pill lp-abandoned">ABANDONED</span>
+            </label>
+            <label class="filter-row lifecycle-row disused-row">
+              <input type="checkbox" name="filter" value="disused_any">
+              <span class="filter-label tag">disused=* / disused:*</span>
+              <span class="lifecycle-pill lp-disused">DISUSED</span>
+            </label>
+            <label class="filter-row lifecycle-row vacant-row">
+              <input type="checkbox" name="filter" value="vacant">
+              <span class="filter-label tag">vacant=yes</span>
+              <span class="lifecycle-pill lp-vacant">VACANT</span>
+            </label>
+          </div>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="section-heading">Planning Overlays
+            <span class="section-badge">England</span>
+          </h2>
+          <p class="section-note">Official designations from planning.data.gov.uk — fetched alongside each query.</p>
+          <div class="filter-list">
+            <label class="filter-row">
+              <input type="checkbox" name="planning-overlay" value="listed-building">
+              <span class="filter-label">Listed Buildings</span>
+              <span class="plan-swatch" style="background:#c8960c"></span>
+            </label>
+            <label class="filter-row">
+              <input type="checkbox" name="planning-overlay" value="brownfield-land">
+              <span class="filter-label">Brownfield Land</span>
+              <span class="plan-swatch" style="background:#8B2500"></span>
+            </label>
+            <label class="filter-row">
+              <input type="checkbox" name="planning-overlay" value="conservation-area">
+              <span class="filter-label">Conservation Areas</span>
+              <span class="plan-swatch" style="background:#1a6b3c"></span>
+            </label>
+            <label class="filter-row">
+              <input type="checkbox" name="planning-overlay" value="article-4-direction-area">
+              <span class="filter-label">Article 4 Directions</span>
+              <span class="plan-swatch" style="background:#5b2d8e"></span>
+            </label>
+            <label class="filter-row">
+              <input type="checkbox" name="planning-overlay" value="tree-preservation-order">
+              <span class="filter-label">Tree Preservation Orders</span>
+              <span class="plan-swatch" style="background:#2d6e2d"></span>
+            </label>
+            <label class="filter-row">
+              <input type="checkbox" name="planning-overlay" value="scheduled-monument">
+              <span class="filter-label">Scheduled Monuments</span>
+              <span class="plan-swatch" style="background:#7a3010"></span>
+            </label>
+            <label class="filter-row">
+              <input type="checkbox" name="planning-overlay" value="flood-risk-zone">
+              <span class="filter-label">Flood Risk Zones 2 &amp; 3</span>
+              <span class="plan-swatch" style="background:linear-gradient(90deg,#4a90c8 50%,#1a3a8c 50%)"></span>
+            </label>
+          </div>
+          <p class="section-note coverage-warning" id="planning-coverage-warning" hidden>
+            Planning overlays cover <strong>England only</strong>. Scotland and Northern Ireland use separate registers not available via this API.
+          </p>
+        </section>
+
+        <section class="sidebar-section">
+          <h2 class="section-heading">External Datasets
+            <span class="section-badge">UK-wide</span>
+          </h2>
+          <p class="section-note">Government registers loaded as overlay layers — independent of the main OSM query.</p>
+          <div class="filter-list">
+            <label class="filter-row">
+              <input type="checkbox" name="ext-layer" value="fsa">
+              <span class="filter-label">Food Industry Sites</span>
+              <span class="plan-swatch" style="background:#b85000"></span>
+            </label>
+            <label class="filter-row">
+              <input type="checkbox" name="ext-layer" value="epr">
+              <span class="filter-label">EA Permitted Sites</span>
+              <span class="plan-swatch" style="background:#505060"></span>
+            </label>
+            <label class="filter-row">
+              <input type="checkbox" name="ext-layer" value="strategy-zones">
+              <span class="filter-label">Strategy Zones &amp; Freeports</span>
+              <span class="plan-swatch" style="background:linear-gradient(90deg,#c07000 33%,#8b2d8b 33% 66%,#005a9c 66%)"></span>
+            </label>
+          </div>
+        </section>
+
+        <section class="sidebar-section tools-section">
+          <button class="btn-tool" id="btn-analyse"    type="button">▣ Draw Area to Analyse</button>
+          <button class="btn-tool btn-gap-finder" id="btn-gap-finder" type="button">⬡ VOA Gap Finder</button>
+          <button class="btn-tool" id="btn-export-csv" type="button">↓ Export Results CSV</button>
+          <button class="btn-tool" id="btn-share"      type="button">⎘ Copy Share Link</button>
+          <button class="btn-tool" id="btn-clear"      type="button">✕ Clear Results</button>
+        </section>
+
+      </div>
+
+      <div class="run-dock">
+        <button id="btn-run-query" class="btn-run" disabled type="button">Run Query</button>
+        <p id="run-hint" class="run-hint">Zoom in to enable</p>
+      </div>
+    </aside>
+
+    <div id="map-wrapper">
+      <div id="map"></div>
+    </div>
+
+    <aside id="sidebar-right" class="sidebar">
+
+      <div id="panel-welcome" class="panel">
+        <div class="panel-body">
+          <h2>Industrial Atlas UK</h2>
+          <p class="panel-intro">Discover workshops, manufacturing sites, industrial buildings, and productive urban spaces across the United Kingdom.</p>
+          <ol class="how-to">
+            <li>Navigate to a region — click the map, use Quick Areas, or search</li>
+            <li>Select filters for the features you want to find</li>
+            <li>Click <strong>Run Query</strong></li>
+          </ol>
+          <div class="legend">
+            <div class="legend-title">Feature types</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#b35c00"></span>Workshop / Craft</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#1a3a5c"></span>Manufacturing</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#2c2c2c"></span>Industrial Building</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#5c5c5c"></span>Warehouse</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#2d6a4f"></span>Maker Space</div>
+            <div class="legend-row"><span class="legend-dot" style="background:#4a4a8a"></span>Railway Arch</div>
+            <div class="legend-row">
+              <span class="legend-swatch" style="background:rgba(180,140,80,0.3);border:1.5px solid #7a5c2e"></span>
+              Industrial Land
+            </div>
+          </div>
+        </div>
+        <div class="osm-credit">
+          Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>, ODbL.
+        </div>
+      </div>
+
+      <div id="panel-results" class="panel" hidden>
+        <div class="panel-header">
+          <h3 id="results-title">Results</h3>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button id="btn-sort-score" class="btn-sort" title="Sort by opportunity score">↕ Score</button>
+            <button class="panel-close" data-close="results" aria-label="Close">×</button>
+          </div>
+        </div>
+        <div id="results-summary" class="results-summary"></div>
+        <div id="score-chips" class="score-chips" hidden>
+          <button class="score-chip active" data-min="0">All</button>
+          <button class="score-chip" data-min="40">Score 40+</button>
+          <button class="score-chip" data-min="60">Score 60+</button>
+          <button class="score-chip" data-min="80">Score 80+</button>
+          <button class="score-chip lc-chip" data-lifecycle="1">Abandoned / Disused</button>
+        </div>
+        <div id="size-chips" class="score-chips size-chips" hidden>
+          <button class="size-chip active" data-min-area="0">Any size</button>
+          <button class="size-chip" data-min-area="1">Polygons only</button>
+          <button class="size-chip" data-min-area="500">500 m²+</button>
+          <button class="size-chip" data-min-area="5000">5,000 m²+</button>
+          <button class="size-chip" data-min-area="25000">25,000 m²+</button>
+        </div>
+        <ul id="results-list" class="results-list" aria-label="Results"></ul>
+      </div>
+
+      <div id="panel-feature" class="panel" hidden>
+        <div class="panel-header">
+          <button class="panel-back" id="btn-back-to-results">← Results</button>
+          <button class="panel-close" data-close="feature" aria-label="Close">×</button>
+        </div>
+        <div id="feature-content" class="feature-content"></div>
+      </div>
+
+      <div id="panel-analysis" class="panel" hidden>
+        <div class="panel-header">
+          <h3>Area Analysis</h3>
+          <button class="panel-close" data-close="analysis" aria-label="Close">×</button>
+        </div>
+        <div id="analysis-content" class="analysis-content"></div>
+      </div>
+
+      <div id="panel-gap" class="panel" hidden>
+        <div class="panel-header">
+          <h3>VOA Gap Finder</h3>
+          <button class="panel-close" data-close="gap" aria-label="Close">×</button>
+        </div>
+        <div id="gap-content" class="gap-content"></div>
+      </div>
+
+      <div id="panel-gap-detail" class="panel" hidden>
+        <div class="panel-header">
+          <button class="panel-back" id="btn-back-to-gaps">← Gap List</button>
+          <button class="panel-close" data-close="gap-detail" aria-label="Close">×</button>
+        </div>
+        <div id="gap-detail-content" class="feature-content"></div>
+      </div>
+
+    </aside>
+  </main>
+
+  <div id="loading-bar" hidden>
+    <div id="loading-bar-fill"></div>
+  </div>
+
+  <div id="toast" hidden role="status" aria-live="polite"></div>
+
+  <button class="mobile-fab mobile-fab-left"  id="mob-toggle-left"  aria-label="Open filters">☰</button>
+  <button class="mobile-fab mobile-fab-right" id="mob-toggle-right" aria-label="Open details">ℹ</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="overpass.js"></script>
+  <script src="planning.js"></script>
+  <script src="companies.js"></script>
+  <script src="voa.js"></script>
+  <script src="voa_geo.js"></script>
+  <script src="scoring.js"></script>
+  <script src="fsa.js"></script>
+  <script src="epr.js"></script>
+  <script src="strategy_zones.js"></script>
+  <script src="map.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

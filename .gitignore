@@ -1,0 +1,7 @@
+# Raw source downloads — regenerate with scripts/
+*.zip
+*.accdb
+*.mdb
+
+# macOS
+.DS_Store
