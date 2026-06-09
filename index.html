@@ -183,6 +183,11 @@
               <span class="filter-label">Strategy Zones &amp; Freeports</span>
               <span class="plan-swatch" style="background:linear-gradient(90deg,#c07000 33%,#8b2d8b 33% 66%,#005a9c 66%)"></span>
             </label>
+            <label class="filter-row">
+              <input type="checkbox" name="ext-layer" value="inspire">
+              <span class="filter-label">Property Boundaries <span style="font-size:10px;color:#aaa">(zoom 14+)</span></span>
+              <span class="plan-swatch" style="background:#c07000;opacity:0.6"></span>
+            </label>
           </div>
         </section>
 
@@ -241,6 +246,7 @@
           <h3 id="results-title">Results</h3>
           <div style="display:flex;align-items:center;gap:6px">
             <button id="btn-sort-score" class="btn-sort" title="Sort by opportunity score">↕ Score</button>
+            <button id="btn-sort-area"  class="btn-sort" title="Sort by building area">↕ Area</button>
             <button class="panel-close" data-close="results" aria-label="Close">×</button>
           </div>
         </div>
@@ -319,6 +325,7 @@
   <script src="fsa.js"></script>
   <script src="epr.js"></script>
   <script src="strategy_zones.js"></script>
+  <script src="inspire.js"></script>
   <script src="map.js"></script>
   <script src="app.js"></script>
 </body>

@@ -24,6 +24,7 @@ const App = (() => {
     gapFinderActive:  false,       /* VOA gap finder mode */
     lastGapResult:    null,        /* { gaps, matched, total } */
     minAreaM2:        0,           /* 0 = no filter, 1 = polygons only, N = N m²+ */
+    sortByArea:       false,
   };
 
   /* ---- DOM helpers -------------------------------------- */
@@ -221,7 +222,13 @@ const App = (() => {
       });
     }
 
-    if (state.sortByScore) {
+    if (state.sortByArea) {
+      display.sort((a, b) => {
+        const aa = state.quickScores.get(a.id);
+        const ab = state.quickScores.get(b.id);
+        return (ab ? ab.areaM2 : 0) - (aa ? aa.areaM2 : 0);
+      });
+    } else if (state.sortByScore) {
       display.sort((a, b) => {
         const sa = state.quickScores.get(a.id);
         const sb = state.quickScores.get(b.id);
@@ -542,7 +549,7 @@ const App = (() => {
       return;
     }
 
-    const cols = ['id','type','name','feature_type','lat','lon','score','classification','lifecycle','postcode','osm_url'];
+    const cols = ['id','type','name','feature_type','lat','lon','area_m2','score','classification','lifecycle','postcode','osm_url'];
     const rows = [cols.join(',')];
 
     for (const el of state.lastResults) {
@@ -565,6 +572,7 @@ const App = (() => {
         el.id, el.type,
         `"${name.replace(/"/g, '""')}"`,
         type, lat, lon,
+        qs && qs.areaM2 > 0 ? Math.round(qs.areaM2) : '',
         qs ? qs.score : '',
         qs ? `"${qs.classification}"` : '',
         lc,
@@ -769,6 +777,47 @@ const App = (() => {
       const scoredTotal = Object.values(bands).reduce((s, n) => s + n, 0);
       const highCount   = (bands.high || 0) + (bands.candidate || 0);
 
+      /* Area size breakdown for polygon features in bounds */
+      const sizeBuckets = { major: 0, large: 0, medium: 0, small: 0 };
+      let totalAreaM2 = 0, polygonCount = 0;
+      for (const el of state.lastResults) {
+        let lat, lon;
+        if (el.type === 'node') { lat = el.lat; lon = el.lon; }
+        else if (el.geometry && el.geometry.length) {
+          const c = Overpass.centroid(el.geometry);
+          if (!c) continue;
+          lat = c.lat; lon = c.lon;
+        } else continue;
+        if (!bounds.contains([lat, lon])) continue;
+        const qs = state.quickScores.get(el.id);
+        if (!qs || qs.areaM2 <= 0) continue;
+        polygonCount++;
+        totalAreaM2 += qs.areaM2;
+        if      (qs.areaM2 > 25000) sizeBuckets.major++;
+        else if (qs.areaM2 >  5000) sizeBuckets.large++;
+        else if (qs.areaM2 >   500) sizeBuckets.medium++;
+        else                        sizeBuckets.small++;
+      }
+
+      const SIZE_META = [
+        { key: 'major',  label: 'Major (>25,000 m²)',  color: '#1c4a8a' },
+        { key: 'large',  label: 'Large (5–25,000 m²)', color: '#2d6a9a' },
+        { key: 'medium', label: 'Medium (500–5,000 m²)', color: '#4a8ab0' },
+        { key: 'small',  label: 'Small (<500 m²)',      color: '#7aaac8' },
+      ];
+      const sizeRows = SIZE_META.filter(b => sizeBuckets[b.key])
+        .map(b => `<div class="analysis-row">
+          <span class="analysis-label">
+            <span style="background:${b.color};border-radius:2px;width:10px;height:10px;display:inline-block;flex-shrink:0"></span>
+            ${b.label}
+          </span>
+          <span class="analysis-count" style="color:${b.color}">${sizeBuckets[b.key]}</span>
+        </div>`).join('');
+
+      const totalAreaFmt = totalAreaM2 >= 10000
+        ? `${(totalAreaM2 / 10000).toFixed(1)} ha`
+        : `${Math.round(totalAreaM2).toLocaleString()} m²`;
+
       $('analysis-content').innerHTML = `
         <div class="analysis-row analysis-total">
           <span class="analysis-label">Total features in area</span>
@@ -779,6 +828,11 @@ const App = (() => {
         <div class="analysis-section-head">Score distribution (${scoredTotal} scored)</div>
         ${scoreRows}
         ${highCount ? `<div class="analysis-highlight">⬡ ${highCount} site${highCount > 1 ? 's' : ''} score 60+ — worth investigating</div>` : ''}
+        ` : ''}
+        ${sizeRows ? `
+        <div class="analysis-section-head">Building sizes (${polygonCount} with polygon data)</div>
+        ${sizeRows}
+        <div class="analysis-highlight" style="color:#1c4a8a">▦ ${totalAreaFmt} total floor area across ${polygonCount} polygon${polygonCount !== 1 ? 's' : ''}</div>
         ` : ''}`;
     }
 
@@ -1349,6 +1403,15 @@ const App = (() => {
         EPRLayer.hide(map);
       }
 
+    } else if (value === 'inspire') {
+      if (enabled) {
+        toast('Loading property boundaries…', 2000);
+        const n = await INSPIRELayer.show(map);
+        if (n) toast(`${n.toLocaleString()} registered title polygons loaded`);
+      } else {
+        INSPIRELayer.hide(map);
+      }
+
     } else if (value === 'strategy-zones') {
       if (enabled) {
         if (!_strategyZonesGroup) {
@@ -1543,6 +1606,12 @@ const App = (() => {
       state.minScore       = 0;
       state.lifecycleOnly  = false;
       state.minAreaM2      = 0;
+      state.sortByArea     = false;
+      state.sortByScore    = false;
+      $('btn-sort-score').classList.remove('active');
+      $('btn-sort-area').classList.remove('active');
+      $('btn-sort-score').textContent = '↕ Score';
+      $('btn-sort-area').textContent  = '↕ Area';
       $('score-chips').hidden = true;
       $('size-chips').hidden  = true;
       showPanel('panel-welcome');
@@ -1601,8 +1670,22 @@ const App = (() => {
     /* Sort by score toggle */
     $('btn-sort-score').addEventListener('click', () => {
       state.sortByScore = !state.sortByScore;
+      if (state.sortByScore) state.sortByArea = false;
       $('btn-sort-score').classList.toggle('active', state.sortByScore);
       $('btn-sort-score').textContent = state.sortByScore ? '↓ Score' : '↕ Score';
+      $('btn-sort-area').classList.remove('active');
+      $('btn-sort-area').textContent = '↕ Area';
+      _renderResultsList(state.lastResults);
+    });
+
+    /* Sort by area toggle */
+    $('btn-sort-area').addEventListener('click', () => {
+      state.sortByArea = !state.sortByArea;
+      if (state.sortByArea) state.sortByScore = false;
+      $('btn-sort-area').classList.toggle('active', state.sortByArea);
+      $('btn-sort-area').textContent = state.sortByArea ? '↓ Area' : '↕ Area';
+      $('btn-sort-score').classList.remove('active');
+      $('btn-sort-score').textContent = '↕ Score';
       _renderResultsList(state.lastResults);
     });
 
