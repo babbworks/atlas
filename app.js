@@ -23,7 +23,8 @@ const App = (() => {
     planningResult:   null,        /* last PlanningData.query() result */
     gapFinderActive:  false,       /* VOA gap finder mode */
     lastGapResult:    null,        /* { gaps, matched, total } */
-    minAreaM2:        0,           /* 0 = no filter, 1 = polygons only, N = N m²+ */
+    areaMin:          0,           /* range filter: min m² (0 = off) */
+    areaMax:          Infinity,    /* range filter: max m² */
     sortByArea:       false,
   };
 
@@ -181,7 +182,8 @@ const App = (() => {
     /* Reset chips to "All" when new results arrive */
     state.minScore      = 0;
     state.lifecycleOnly = false;
-    state.minAreaM2     = 0;
+    state.areaMin       = 0;
+    state.areaMax       = Infinity;
     _syncChips();
     _syncSizeChips();
     $('score-chips').hidden = false;
@@ -213,12 +215,12 @@ const App = (() => {
       });
     }
 
-    /* Apply area filter */
-    if (state.minAreaM2 > 0) {
+    /* Apply area range filter */
+    if (state.areaMin > 0 || state.areaMax < Infinity) {
       display = display.filter(el => {
         const qs = state.quickScores.get(el.id);
         const a  = qs ? qs.areaM2 : 0;
-        return state.minAreaM2 === 1 ? a > 0 : a >= state.minAreaM2;
+        return a >= state.areaMin && a < state.areaMax;
       });
     }
 
@@ -1350,7 +1352,9 @@ const App = (() => {
 
   function _syncSizeChips() {
     qa('.size-chip').forEach(btn => {
-      btn.classList.toggle('active', parseInt(btn.dataset.minArea, 10) === state.minAreaM2);
+      const min = parseInt(btn.dataset.minArea, 10);
+      const max = btn.dataset.maxArea === 'Infinity' ? Infinity : parseFloat(btn.dataset.maxArea);
+      btn.classList.toggle('active', min === state.areaMin && max === state.areaMax);
     });
   }
 
@@ -1605,7 +1609,8 @@ const App = (() => {
       state.analysisReady  = false;
       state.minScore       = 0;
       state.lifecycleOnly  = false;
-      state.minAreaM2      = 0;
+      state.areaMin        = 0;
+      state.areaMax        = Infinity;
       state.sortByArea     = false;
       state.sortByScore    = false;
       $('btn-sort-score').classList.remove('active');
@@ -1661,7 +1666,8 @@ const App = (() => {
     /* Size chips */
     qa('.size-chip').forEach(btn => {
       btn.addEventListener('click', () => {
-        state.minAreaM2 = parseInt(btn.dataset.minArea, 10);
+        state.areaMin = parseInt(btn.dataset.minArea, 10);
+        state.areaMax = btn.dataset.maxArea === 'Infinity' ? Infinity : parseFloat(btn.dataset.maxArea);
         _syncSizeChips();
         _renderResultsList(state.lastResults);
       });

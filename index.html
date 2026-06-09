@@ -259,11 +259,13 @@
           <button class="score-chip lc-chip" data-lifecycle="1">Abandoned / Disused</button>
         </div>
         <div id="size-chips" class="score-chips size-chips" hidden>
-          <button class="size-chip active" data-min-area="0">Any size</button>
-          <button class="size-chip" data-min-area="1">Polygons only</button>
-          <button class="size-chip" data-min-area="500">500 m²+</button>
-          <button class="size-chip" data-min-area="5000">5,000 m²+</button>
-          <button class="size-chip" data-min-area="25000">25,000 m²+</button>
+          <button class="size-chip active" data-min-area="0"     data-max-area="Infinity">All</button>
+          <button class="size-chip"        data-min-area="1"     data-max-area="100"     >&lt;100 m²</button>
+          <button class="size-chip"        data-min-area="100"   data-max-area="500"     >100–500 m²</button>
+          <button class="size-chip"        data-min-area="500"   data-max-area="1500"    >500–1,500 m²</button>
+          <button class="size-chip"        data-min-area="1500"  data-max-area="5000"    >1,500–5,000 m²</button>
+          <button class="size-chip"        data-min-area="5000"  data-max-area="25000"   >5,000–25,000 m²</button>
+          <button class="size-chip"        data-min-area="25000" data-max-area="Infinity">25,000 m²+</button>
         </div>
         <ul id="results-list" class="results-list" aria-label="Results"></ul>
       </div>
