@@ -124,10 +124,14 @@ def main():
         accdb_names = [n for n in zf.namelist() if n.lower().endswith('.accdb') or n.lower().endswith('.mdb')]
 
         if not csv_names and accdb_names:
-            mdb_export = shutil.which('mdb-export')
+            mdb_export = (shutil.which('mdb-export') or
+                          shutil.which('/opt/local/bin/mdb-export') or
+                          (os.path.isfile('/opt/local/bin/mdb-export') and '/opt/local/bin/mdb-export'))
             if not mdb_export:
                 print('ERROR: ZIP contains an Access database (.accdb) but mdbtools is not installed.')
-                print('Install with: brew install mdbtools')
+                print('Install with:')
+                print('  sudo port install mdbtools    (MacPorts — recommended on macOS 12)')
+                print('  brew install mdbtools          (Homebrew — may fail on macOS 12)')
                 print('Then re-run this script.')
                 return
 
@@ -139,9 +143,10 @@ def main():
                         with open(accdb_path, 'wb') as out:
                             out.write(af.read())
 
+                    mdb_tables = mdb_export.replace('mdb-export', 'mdb-tables')
                     print(f'Extracted {accdb_name} — listing tables…')
                     tables_raw = subprocess.check_output(
-                        ['mdb-tables', '-1', accdb_path], text=True
+                        [mdb_tables, '-1', accdb_path], text=True
                     ).strip().splitlines()
                     print(f'Tables: {tables_raw}')
 
