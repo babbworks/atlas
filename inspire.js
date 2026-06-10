@@ -8,7 +8,12 @@
 
 const INSPIRELayer = (() => {
 
-  const WFS_BASE = 'https://inspire.landregistry.gov.uk/inspire/ows';
+  /* Cloudflare Worker proxy URL — fill in after deploying inspire-proxy/.
+     Run:  cd inspire-proxy && npx wrangler deploy
+     Then replace the placeholder below with your assigned workers.dev URL.
+     For local dev run `npx wrangler dev` in inspire-proxy/ and use http://localhost:8787 */
+  const WFS_BASE = 'https://inspire-proxy.REPLACE_WITH_YOUR_SUBDOMAIN.workers.dev';
+
   const MAX_FEATURES = 2000;
 
   let _group = null;

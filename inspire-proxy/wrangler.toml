@@ -1,0 +1,7 @@
+name = "inspire-proxy"
+main = "worker.js"
+compatibility_date = "2025-06-01"
+
+# Free tier: 100,000 requests/day, no charge.
+# Routes are auto-assigned as: https://inspire-proxy.<your-subdomain>.workers.dev
+# To bind to a custom domain, add a route in the Cloudflare dashboard.

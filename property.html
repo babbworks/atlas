@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Property — Industrial Atlas UK</title>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    html, body { height: auto; overflow: auto; background: #ece9e2; }
+
+    #prop-header {
+      height: 46px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 14px;
+      background: #1c1c1c;
+      color: #f0ede6;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid #000;
+    }
+
+    .prop-brand { display: flex; align-items: center; gap: 9px; flex: 1; }
+
+    .prop-back {
+      font-size: 12px;
+      color: #b8b4ae;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: color 0.1s;
+    }
+    .prop-back:hover { color: #f0ede6; text-decoration: none; }
+
+    .prop-card { background: #fff; border: 1px solid #d4d0c8; border-radius: 4px; overflow: hidden; }
+    .prop-body { padding: 20px 22px 22px; }
+
+    .prop-badges { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 9px; }
+    .prop-badges .feature-type-badge { margin: 0; }
+
+    .prop-name { font-size: 20px; font-weight: 600; color: #1a1a1a; line-height: 1.25; margin-bottom: 4px; }
+
+    .prop-coords {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11.5px;
+      color: #bbb;
+      margin-bottom: 2px;
+    }
+
+    .prop-osmref {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10.5px;
+      color: #d0ccc6;
+      margin-bottom: 0;
+    }
+
+    .prop-map-block {
+      margin: 16px -22px 0;
+      height: 230px;
+      position: relative;
+      border-top: 1px solid #ece9e4;
+      border-bottom: 1px solid #ece9e4;
+      background: #e8e4dc;
+    }
+    #prop-map { height: 100%; width: 100%; }
+
+    .prop-section-head {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #999;
+      margin: 18px 0 7px;
+    }
+
+    .prop-tags { margin-bottom: 0; }
+
+    .prop-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid #ece9e4;
+    }
+
+    .prop-link {
+      display: inline-block;
+      padding: 6px 12px;
+      background: #f7f5f1;
+      border: 1px solid #d4d0c8;
+      border-radius: 2px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 12px;
+      color: #1a3a5c;
+      text-decoration: none;
+      transition: background 0.1s;
+    }
+    .prop-link:hover { background: #ece8e0; text-decoration: none; color: #0f2338; }
+    .prop-link-edit  { color: #5c3a00; border-color: #c8a060; }
+    .prop-link-edit:hover { background: #fdf5e6; }
+    .prop-link-atlas { background: #1c1c1c; color: #f0ede6; border-color: transparent; }
+    .prop-link-atlas:hover { background: #333; color: #f0ede6; }
+    .prop-link-map   { background: #1c4a8a; color: #dde8f8; border-color: #1c4a8a; }
+    .prop-link-map:hover { background: #163a6e; color: #dde8f8; }
+
+    .prop-footer {
+      background: #f7f5f1;
+      border-top: 1px solid #ece9e4;
+      padding: 10px 22px;
+      font-size: 11px;
+      color: #aaa;
+      line-height: 1.5;
+    }
+
+    .prop-loading { padding: 48px 22px; text-align: center; color: #aaa; font-size: 14px; }
+
+    .prop-error { padding: 40px 22px; font-size: 14px; color: #a82820; line-height: 1.6; }
+    .prop-error a { color: #1a3a5c; }
+
+    .prop-body .score-panel { margin-bottom: 4px; }
+
+    @media (max-width: 500px) {
+      .prop-name { font-size: 17px; }
+      .prop-map-block { height: 180px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header id="prop-header">
+    <div class="prop-brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 90" width="11" height="17" fill="currentColor">
+          <path d="M8,4 L10,0 L21,0 L32,9 L32,29 L35,38 L59,61 L57,77 L35,81 L13,81 L4,87 L8,77 L7,72 L13,63 L12,55 L23,47 L20,42 L3,34 L9,26 L0,20 Z"/>
+        </svg>
+      </div>
+      <span class="brand-name">Industrial Atlas <span class="brand-country">UK</span></span>
+    </div>
+    <a class="prop-back" href="index.html">← Back to Atlas</a>
+  </header>
+
+  <main id="prop-layout">
+    <div id="prop-col-card">
+      <div class="prop-card" id="prop-card">
+        <div class="prop-body">
+          <div class="prop-loading">Loading property…</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="prop-col-notes">
+      <div class="notes-panel">
+        <div class="notes-panel-header">
+          <span class="notes-panel-title">Notes</span>
+          <button class="btn-save-page" id="btn-save-page">↓ Save Page</button>
+        </div>
+        <div class="notes-body">
+          <textarea class="notes-input" id="notes-input" placeholder="Add a note about this property… (Ctrl+Enter to add)" rows="4"></textarea>
+          <button class="btn-add-note" id="btn-add-note">Add Note</button>
+          <div class="notes-list" id="notes-list">
+            <div class="notes-empty" id="notes-empty">No notes yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="overpass.js"></script>
+  <script src="scoring.js"></script>
+  <script>
+    'use strict';
+
+    const FEATURE_STYLES = {
+      workshops:            { color: '#b35c00', label: 'Workshop / Craft' },
+      manufacturing:        { color: '#1a3a5c', label: 'Manufacturing' },
+      industrial_buildings: { color: '#2c2c2c', label: 'Industrial Building' },
+      warehouses:           { color: '#5c5c5c', label: 'Warehouse' },
+      maker_spaces:         { color: '#2d6a4f', label: 'Maker Space' },
+      railway_arches:       { color: '#4a4a8a', label: 'Railway Arch' },
+      other:                { color: '#888888', label: 'Industrial' },
+    };
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function fmtArea(m2) {
+      return m2 >= 10000
+        ? `${(m2 / 10000).toFixed(1)} ha`
+        : `${Math.round(m2).toLocaleString()} m²`;
+    }
+
+    /* ---- Notes module ---- */
+    let _propType = null, _propId = null;
+
+    function addNote() {
+      const input = document.getElementById('notes-input');
+      const text  = input.value.trim();
+      if (!text) return;
+
+      const now  = new Date();
+      const time = now.toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+
+      const empty = document.getElementById('notes-empty');
+      if (empty) empty.remove();
+
+      const item = document.createElement('div');
+      item.className = 'note-item';
+      item.innerHTML =
+        `<div class="note-item-time">${time}</div>` +
+        `<div class="note-item-text">${esc(text)}</div>`;
+
+      const list = document.getElementById('notes-list');
+      list.insertBefore(item, list.firstChild);
+      input.value = '';
+      input.focus();
+    }
+
+    async function savePage() {
+      const btn = document.getElementById('btn-save-page');
+      btn.textContent = '… Saving';
+      btn.disabled = true;
+
+      try {
+        /* Try to inline styles.css for portability */
+        let extraStyle = '';
+        try {
+          const r = await fetch('styles.css');
+          if (r.ok) extraStyle = await r.text();
+        } catch (_) {}
+
+        const clone = document.documentElement.cloneNode(true);
+
+        /* Inline styles.css */
+        if (extraStyle) {
+          const link = clone.querySelector('link[href="styles.css"]');
+          if (link) {
+            const el = document.createElement('style');
+            el.textContent = extraStyle;
+            link.replaceWith(el);
+          }
+        }
+
+        /* Remove external scripts (Leaflet, overpass, scoring) */
+        clone.querySelectorAll('script[src]').forEach(s => s.remove());
+
+        /* Neutralize the inline init script so it doesn't re-fetch */
+        clone.querySelectorAll('script:not([src])').forEach(s => {
+          s.textContent = s.textContent.replace(/\binit\(\);?\s*$/, '/* saved */');
+        });
+
+        /* Replace map block with a static placeholder */
+        const mapBlock = clone.querySelector('.prop-map-block');
+        if (mapBlock) {
+          mapBlock.innerHTML =
+            '<div style="height:100%;display:flex;align-items:center;justify-content:center;' +
+            'color:#bbb;font-size:12px;font-family:sans-serif;background:#e8e4dc">' +
+            'Map · open in browser to view</div>';
+        }
+
+        const html  = '<!DOCTYPE html>\n' + clone.outerHTML;
+        const blob  = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const a     = document.createElement('a');
+        a.href      = URL.createObjectURL(blob);
+        a.download  = `property-${_propType || 'element'}-${_propId || 'id'}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      } finally {
+        btn.textContent = '↓ Save Page';
+        btn.disabled = false;
+      }
+    }
+
+    function initNotes(type, id) {
+      _propType = type;
+      _propId   = id;
+
+      document.getElementById('btn-add-note').addEventListener('click', addNote);
+      document.getElementById('btn-save-page').addEventListener('click', savePage);
+      document.getElementById('notes-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addNote(); }
+      });
+    }
+
+    /* ---- Map ---- */
+    async function fetchElement(type, id) {
+      const q = type === 'node'
+        ? `[out:json];node(${id});out meta;`
+        : `[out:json];${type}(${id});out geom meta;`;
+      const r = await fetch(
+        'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q)
+      );
+      if (!r.ok) throw new Error(`Overpass HTTP ${r.status}`);
+      const data = await r.json();
+      if (!data.elements?.length) throw new Error('Element not found in OSM');
+      return data.elements[0];
+    }
+
+    function initMap(el, lat, lon, style, sr) {
+      const map = L.map('prop-map', {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: true,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+      });
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, crossOrigin: 'anonymous',
+      }).addTo(map);
+
+      L.control.attribution({ prefix: false })
+        .addAttribution('© <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>')
+        .addTo(map);
+
+      let zoom = 17;
+      if      (sr.areaM2 > 80000) zoom = 14;
+      else if (sr.areaM2 > 15000) zoom = 15;
+      else if (sr.areaM2 > 3000)  zoom = 16;
+
+      map.setView([lat, lon], zoom);
+
+      if (el.geometry?.length >= 3) {
+        L.polygon(el.geometry.map(p => [p.lat, p.lon]), {
+          color: style.color, weight: 2,
+          fillColor: style.color, fillOpacity: 0.15,
+          interactive: false,
+        }).addTo(map);
+      }
+
+      L.marker([lat, lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="width:14px;height:14px;background:${style.color};border:2.5px solid #fff;border-radius:50%;box-shadow:0 1px 6px rgba(0,0,0,0.45)"></div>`,
+          iconSize: [14, 14], iconAnchor: [7, 7],
+        }),
+        interactive: false,
+      }).addTo(map);
+
+      setTimeout(() => map.invalidateSize(), 80);
+    }
+
+    function render(el, type, id) {
+      const tags      = el.tags || {};
+      const featureType = Overpass.classify(tags);
+      const name      = Overpass.displayName(el) || featureType.replace(/_/g, ' ');
+      const style     = FEATURE_STYLES[featureType] || FEATURE_STYLES.other;
+      const lifecycle = Overpass.lifecycleStatus(tags);
+      const sr        = Scoring.score(el, []);
+
+      let lat = null, lon = null;
+      if (el.type === 'node') {
+        lat = el.lat; lon = el.lon;
+      } else if (el.geometry?.length) {
+        const c = Overpass.centroid(el.geometry);
+        if (c) { lat = c.lat; lon = c.lon; }
+      }
+
+      const osmUrl   = `https://www.openstreetmap.org/${el.type}/${el.id}`;
+      const osmEdit  = `https://www.openstreetmap.org/edit?${el.type}=${el.id}`;
+      const gmUrl    = lat != null ? `https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
+      const svUrl    = lat != null ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
+      const atlasUrl = lat != null ? `index.html#v=${lat.toFixed(4)},${lon.toFixed(4)},17` : 'index.html';
+      const mapUrl   = `property-map.html#${type}/${id}`;
+
+      document.title = `${name} — Industrial Atlas UK`;
+
+      const lcHtml   = lifecycle ? `<span class="lifecycle-pill lp-${lifecycle}" style="font-size:10px;padding:2px 7px">${lifecycle.toUpperCase()}</span>` : '';
+      const areaHtml = sr.areaM2 > 0 ? `<span class="feature-area-badge">${fmtArea(sr.areaM2)}</span>` : '';
+
+      const tagRows = Object.entries(tags).map(([k, v]) =>
+        `<div class="tag-row">` +
+        `<span class="tag-key">${esc(k)}</span>` +
+        `<span class="tag-eq">=</span>` +
+        `<span class="tag-val">${esc(v)}</span>` +
+        `</div>`
+      ).join('');
+
+      const signalRows = sr.signals.map(sig => {
+        const cls   = sig.delta > 0 ? 'signal-pos' : 'signal-neg';
+        const arrow = sig.delta > 0 ? '▲' : '▼';
+        const fmt   = sig.delta > 0 ? `+${sig.delta}` : `${sig.delta}`;
+        return `<div class="signal-row ${cls}">
+          <span class="signal-arrow">${arrow}</span>
+          <span class="signal-delta">${fmt}</span>
+          <span class="signal-text">${esc(sig.text)}</span>
+        </div>`;
+      }).join('');
+
+      document.getElementById('prop-card').innerHTML = `
+        <div class="prop-body">
+          <div class="prop-badges">
+            <span class="feature-type-badge" style="background:${style.color};margin:0">${esc(style.label)}</span>
+            ${lcHtml}
+            ${areaHtml}
+          </div>
+          <div class="prop-name">${esc(name)}</div>
+          ${lat != null ? `<div class="prop-coords">${lat.toFixed(5)}, ${lon.toFixed(5)}</div>` : ''}
+          <div class="prop-osmref">osm.org/${esc(el.type)}/${el.id}</div>
+        </div>
+        ${lat != null ? `<div class="prop-map-block"><div id="prop-map"></div></div>` : ''}
+        <div class="prop-body" style="padding-top:0">
+          <div class="prop-section-head">Opportunity Score</div>
+          <div class="score-panel" style="border-left-color:${sr.color}">
+            <div class="score-header">
+              <div class="score-block">
+                <div class="score-number" style="color:${sr.color}">${sr.score}</div>
+                <div class="score-label">Opportunity</div>
+              </div>
+              <div class="score-block">
+                <div class="score-number score-conf-num">${sr.confidence}</div>
+                <div class="score-label">Confidence</div>
+              </div>
+              <div class="score-band-block">
+                <div class="score-band" style="color:${sr.color}">${esc(sr.classification)}</div>
+                <div class="score-context-note">quick score · OSM data only</div>
+              </div>
+            </div>
+            <div class="score-signals">
+              ${signalRows || '<div style="color:#aaa;font-size:11px;padding:4px 0">No scoring signals — insufficient tags</div>'}
+            </div>
+            <div class="score-disclaimer">Score based on available OSM tags only. Does not confirm vacancy or availability.</div>
+          </div>
+
+          <div class="prop-section-head">OSM Tags</div>
+          <div class="prop-tags">
+            ${tagRows || '<div style="color:#aaa;font-size:12px">No tags recorded</div>'}
+          </div>
+
+          <div class="prop-links">
+            <a class="prop-link" href="${osmUrl}" target="_blank" rel="noopener">View on OpenStreetMap ↗</a>
+            <a class="prop-link prop-link-edit" href="${osmEdit}" target="_blank" rel="noopener">Edit in OSM iD ↗</a>
+            ${gmUrl ? `<a class="prop-link" href="${gmUrl}" target="_blank" rel="noopener">Google Maps ↗</a>` : ''}
+            ${svUrl ? `<a class="prop-link" href="${svUrl}" target="_blank" rel="noopener">Street View ↗</a>` : ''}
+            <a class="prop-link prop-link-atlas" href="${atlasUrl}">▦ Open in Atlas</a>
+            <a class="prop-link prop-link-map" href="${mapUrl}" target="_blank" rel="noopener">⊞ Full Map View ↗</a>
+          </div>
+        </div>
+        <div class="prop-footer">
+          Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:#888">OpenStreetMap contributors</a>, ODbL.
+          Score is probabilistic — does not imply vacancy or availability.
+        </div>`;
+
+      if (lat !== null) initMap(el, lat, lon, style, sr);
+      initNotes(type, id);
+    }
+
+    async function init() {
+      const hash = window.location.hash.slice(1);
+      const m    = hash.match(/^(node|way|relation)\/(\d+)$/);
+
+      if (!m) {
+        document.getElementById('prop-card').innerHTML =
+          `<div class="prop-body"><div class="prop-error">
+            No property specified.<br>
+            Open a feature in the <a href="index.html">Industrial Atlas</a> and click <em>Property Page</em>.
+          </div></div>`;
+        return;
+      }
+
+      const [, type, id] = m;
+
+      try {
+        const el = await fetchElement(type, id);
+        render(el, type, id);
+      } catch (err) {
+        document.getElementById('prop-card').innerHTML =
+          `<div class="prop-body"><div class="prop-error">
+            Could not load property: ${esc(err.message)}<br>
+            <a href="index.html">← Back to Industrial Atlas</a>
+          </div></div>`;
+      }
+    }
+
+    init();
+  </script>
+
+</body>
+</html>

@@ -18,12 +18,16 @@
 
   <header id="app-header">
     <div class="header-brand">
-      <div class="brand-mark" aria-hidden="true">▦</div>
+      <div class="brand-mark" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 90" width="11" height="17" fill="currentColor">
+          <path d="M8,4 L10,0 L21,0 L32,9 L32,29 L35,38 L59,61 L57,77 L35,81 L13,81 L4,87 L8,77 L7,72 L13,63 L12,55 L23,47 L20,42 L3,34 L9,26 L0,20 Z"/>
+        </svg>
+      </div>
       <h1 class="brand-name">Industrial Atlas <span class="brand-country">UK</span></h1>
     </div>
     <nav class="mode-nav" aria-label="Discovery modes">
-      <button class="mode-btn" data-mode="workshop-explorer">Workshop Explorer</button>
-      <button class="mode-btn" data-mode="urban-manufacturing">Urban Manufacturing</button>
+      <button class="mode-btn" data-mode="workshop-explorer">Workshops</button>
+      <button class="mode-btn" data-mode="urban-manufacturing">Urban Mfg</button>
       <button class="mode-btn" data-mode="hidden-industry">Hidden Industry</button>
     </nav>
     <div class="base-switcher">
@@ -63,62 +67,58 @@
         </section>
 
         <section class="sidebar-section">
-          <h2 class="section-heading">Productive Spaces</h2>
+          <h2 class="section-heading">Query Filters</h2>
+          <div class="filter-subhead">Productive Spaces</div>
           <div class="filter-list">
             <label class="filter-row"><input type="checkbox" name="filter" value="workshops"><span class="filter-label">Workshops</span></label>
             <label class="filter-row"><input type="checkbox" name="filter" value="manufacturing"><span class="filter-label">Manufacturing</span></label>
             <label class="filter-row"><input type="checkbox" name="filter" value="industrial_buildings"><span class="filter-label">Industrial Buildings</span></label>
             <label class="filter-row"><input type="checkbox" name="filter" value="warehouses"><span class="filter-label">Warehouses</span></label>
             <label class="filter-row"><input type="checkbox" name="filter" value="maker_spaces"><span class="filter-label">Maker Spaces</span></label>
-            <label class="filter-row"><input type="checkbox" name="filter" value="railway_arches"><span class="filter-label">Railway Arch Businesses</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="railway_arches"><span class="filter-label">Railway Arches</span></label>
           </div>
-        </section>
-
-        <section class="sidebar-section">
-          <h2 class="section-heading">Building Types</h2>
+          <div class="filter-subhead">Building Types</div>
           <div class="filter-list">
-            <label class="filter-row"><input type="checkbox" name="filter" value="bldg_industrial"><span class="filter-label tag">building=industrial</span></label>
-            <label class="filter-row"><input type="checkbox" name="filter" value="bldg_warehouse"><span class="filter-label tag">building=warehouse</span></label>
-            <label class="filter-row"><input type="checkbox" name="filter" value="bldg_workshop"><span class="filter-label tag">building=workshop</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="bldg_industrial"><span class="filter-label">Industrial buildings</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="bldg_warehouse"><span class="filter-label">Warehouse buildings</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="bldg_workshop"><span class="filter-label">Workshop buildings</span></label>
           </div>
-        </section>
-
-        <section class="sidebar-section">
-          <h2 class="section-heading">Business &amp; Land Use</h2>
+          <div class="filter-subhead">Business &amp; Land Use</div>
           <div class="filter-list">
-            <label class="filter-row"><input type="checkbox" name="filter" value="craft_any"><span class="filter-label tag">craft=*</span></label>
-            <label class="filter-row"><input type="checkbox" name="filter" value="industrial_any"><span class="filter-label tag">industrial=*</span></label>
-            <label class="filter-row"><input type="checkbox" name="filter" value="landuse_industrial"><span class="filter-label tag">landuse=industrial</span></label>
-            <label class="filter-row"><input type="checkbox" name="filter" value="landuse_commercial"><span class="filter-label tag">landuse=commercial</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="craft_any"><span class="filter-label">Craft businesses</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="industrial_any"><span class="filter-label">Industrial use</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="landuse_industrial"><span class="filter-label">Industrial land</span></label>
+            <label class="filter-row"><input type="checkbox" name="filter" value="landuse_commercial"><span class="filter-label">Commercial land</span></label>
           </div>
         </section>
 
         <section class="sidebar-section">
           <h2 class="section-heading">Lifecycle Status</h2>
-          <p class="section-note">Queries OSM tags directly — combine with building filters above for best results.</p>
+          <p class="section-note">Find abandoned, disused, or vacant sites — combine with query filters above.</p>
           <div class="filter-list">
             <label class="filter-row lifecycle-row abandoned-row">
               <input type="checkbox" name="filter" value="abandoned_any">
-              <span class="filter-label tag">abandoned=* / abandoned:*</span>
+              <span class="filter-label">Abandoned sites</span>
               <span class="lifecycle-pill lp-abandoned">ABANDONED</span>
             </label>
             <label class="filter-row lifecycle-row disused-row">
               <input type="checkbox" name="filter" value="disused_any">
-              <span class="filter-label tag">disused=* / disused:*</span>
+              <span class="filter-label">Disused / inactive</span>
               <span class="lifecycle-pill lp-disused">DISUSED</span>
             </label>
             <label class="filter-row lifecycle-row vacant-row">
               <input type="checkbox" name="filter" value="vacant">
-              <span class="filter-label tag">vacant=yes</span>
+              <span class="filter-label">Marked as vacant</span>
               <span class="lifecycle-pill lp-vacant">VACANT</span>
             </label>
           </div>
         </section>
 
-        <section class="sidebar-section">
-          <h2 class="section-heading">Planning Overlays
-            <span class="section-badge">England</span>
-          </h2>
+        <section class="sidebar-section collapsed">
+          <button class="section-heading section-toggle-btn" type="button">
+            Planning Overlays <span class="section-badge">England</span>
+            <span class="section-chevron">▼</span>
+          </button>
           <p class="section-note">Official designations from planning.data.gov.uk — fetched alongside each query.</p>
           <div class="filter-list">
             <label class="filter-row">
@@ -162,10 +162,11 @@
           </p>
         </section>
 
-        <section class="sidebar-section">
-          <h2 class="section-heading">External Datasets
-            <span class="section-badge">UK-wide</span>
-          </h2>
+        <section class="sidebar-section collapsed">
+          <button class="section-heading section-toggle-btn" type="button">
+            External Datasets <span class="section-badge">UK-wide</span>
+            <span class="section-chevron">▼</span>
+          </button>
           <p class="section-note">Government registers loaded as overlay layers — independent of the main OSM query.</p>
           <div class="filter-list">
             <label class="filter-row">
@@ -192,11 +193,13 @@
         </section>
 
         <section class="sidebar-section tools-section">
-          <button class="btn-tool" id="btn-analyse"    type="button">▣ Draw Area to Analyse</button>
-          <button class="btn-tool btn-gap-finder" id="btn-gap-finder" type="button">⬡ VOA Gap Finder</button>
-          <button class="btn-tool" id="btn-export-csv" type="button">↓ Export Results CSV</button>
-          <button class="btn-tool" id="btn-share"      type="button">⎘ Copy Share Link</button>
-          <button class="btn-tool" id="btn-clear"      type="button">✕ Clear Results</button>
+          <div class="tools-grid">
+            <button class="btn-tool" id="btn-analyse"    type="button">▣ Draw Area</button>
+            <button class="btn-tool btn-gap-finder" id="btn-gap-finder" type="button">⬡ VOA Gaps</button>
+            <button class="btn-tool" id="btn-export-csv" type="button">↓ Export CSV</button>
+            <button class="btn-tool" id="btn-share"      type="button">⎘ Share Link</button>
+          </div>
+          <button class="btn-tool" id="btn-clear" type="button" style="width:100%">✕ Clear Results</button>
         </section>
 
       </div>
@@ -224,15 +227,17 @@
           </ol>
           <div class="legend">
             <div class="legend-title">Feature types</div>
-            <div class="legend-row"><span class="legend-dot" style="background:#b35c00"></span>Workshop / Craft</div>
-            <div class="legend-row"><span class="legend-dot" style="background:#1a3a5c"></span>Manufacturing</div>
-            <div class="legend-row"><span class="legend-dot" style="background:#2c2c2c"></span>Industrial Building</div>
-            <div class="legend-row"><span class="legend-dot" style="background:#5c5c5c"></span>Warehouse</div>
-            <div class="legend-row"><span class="legend-dot" style="background:#2d6a4f"></span>Maker Space</div>
-            <div class="legend-row"><span class="legend-dot" style="background:#4a4a8a"></span>Railway Arch</div>
-            <div class="legend-row">
-              <span class="legend-swatch" style="background:rgba(180,140,80,0.3);border:1.5px solid #7a5c2e"></span>
-              Industrial Land
+            <div class="legend-grid">
+              <div class="legend-row"><span class="legend-dot" style="background:#b35c00"></span>Workshop / Craft</div>
+              <div class="legend-row"><span class="legend-dot" style="background:#1a3a5c"></span>Manufacturing</div>
+              <div class="legend-row"><span class="legend-dot" style="background:#2c2c2c"></span>Industrial Bldg</div>
+              <div class="legend-row"><span class="legend-dot" style="background:#5c5c5c"></span>Warehouse</div>
+              <div class="legend-row"><span class="legend-dot" style="background:#2d6a4f"></span>Maker Space</div>
+              <div class="legend-row"><span class="legend-dot" style="background:#4a4a8a"></span>Railway Arch</div>
+              <div class="legend-row">
+                <span class="legend-swatch" style="background:rgba(180,140,80,0.3);border:1.5px solid #7a5c2e"></span>
+                Industrial Land
+              </div>
             </div>
           </div>
         </div>

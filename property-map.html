@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map View — Industrial Atlas UK</title>
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'IBM Plex Sans', system-ui, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #1a1a1a;
+      background: #1c1c1c;
+    }
+
+    body { display: flex; flex-direction: column; }
+
+    /* ---- Header ---- */
+    #pm-header {
+      height: 46px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 12px;
+      background: #1c1c1c;
+      color: #f0ede6;
+      border-bottom: 1px solid #000;
+      z-index: 500;
+    }
+
+    .pm-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      opacity: 0.78;
+    }
+
+    .pm-brand-name {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: #b8b4ae;
+      white-space: nowrap;
+    }
+
+    .pm-property-info {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .pm-prop-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f0ede6;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+
+    .pm-type-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 2px;
+      color: #fff;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .pm-area-badge {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      color: #8ab0d0;
+      background: rgba(140, 175, 220, 0.12);
+      border: 1px solid rgba(140, 175, 220, 0.25);
+      border-radius: 3px;
+      padding: 1px 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .pm-lc-pill {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 1px 5px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .pm-header-links {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .pm-hlink {
+      font-size: 11px;
+      color: #999;
+      text-decoration: none;
+      padding: 3px 8px;
+      border: 1px solid #3a3a3a;
+      border-radius: 2px;
+      white-space: nowrap;
+      transition: background 0.1s, color 0.1s;
+    }
+    .pm-hlink:hover { background: #2e2e2e; color: #f0ede6; border-color: #666; text-decoration: none; }
+
+    /* ---- Body: left | map | right ---- */
+    #pm-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ---- Left panel: score ---- */
+    #pm-left {
+      width: 232px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #d4d0c8;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pm-panel-section {
+      padding: 12px 14px;
+      border-bottom: 1px solid #ece9e4;
+    }
+
+    .pm-panel-head {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: #bbb;
+      margin-bottom: 8px;
+    }
+
+    .pm-score-block {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .pm-score-num {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 42px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .pm-score-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .pm-score-band {
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+
+    .pm-score-conf {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: #aaa;
+    }
+
+    .pm-score-bar-wrap {
+      height: 3px;
+      background: #ece9e4;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .pm-score-bar { height: 3px; border-radius: 2px; }
+
+    .pm-signals { display: flex; flex-direction: column; gap: 2px; }
+
+    .pm-signal {
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .pm-sig-arrow { font-size: 8px; flex-shrink: 0; width: 9px; }
+    .pm-sig-delta {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      width: 26px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .pm-sig-text { color: #444; flex: 1; }
+
+    .pm-sig-pos .pm-sig-arrow,
+    .pm-sig-pos .pm-sig-delta { color: #2d6a4f; }
+    .pm-sig-neg .pm-sig-arrow,
+    .pm-sig-neg .pm-sig-delta { color: #a82820; }
+
+    .pm-disclaimer {
+      font-size: 9.5px;
+      color: #ccc;
+      font-style: italic;
+      line-height: 1.4;
+      margin-top: 8px;
+    }
+
+    /* ---- Map center ---- */
+    #pm-map-wrap {
+      flex: 1;
+      position: relative;
+      min-width: 0;
+    }
+
+    #pm-map {
+      position: absolute;
+      inset: 0;
+    }
+
+    /* ---- Right panel: tags + links ---- */
+    #pm-right {
+      width: 252px;
+      flex-shrink: 0;
+      background: #fff;
+      border-left: 1px solid #d4d0c8;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pm-tag-row {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10.5px;
+      margin-bottom: 3px;
+      word-break: break-all;
+      line-height: 1.4;
+    }
+
+    .pm-tag-key { color: #8aabbc; }
+    .pm-tag-eq  { color: #ccc; margin: 0 1px; }
+    .pm-tag-val { color: #2d4a2d; }
+
+    .pm-link {
+      display: block;
+      padding: 6px 10px;
+      background: #f7f5f1;
+      border: 1px solid #d4d0c8;
+      border-radius: 2px;
+      font-size: 12px;
+      color: #1a3a5c;
+      text-decoration: none;
+      margin-bottom: 4px;
+      transition: background 0.1s;
+    }
+    .pm-link:hover { background: #ece8e0; text-decoration: none; }
+    .pm-link-edit { color: #5c3a00; border-color: #c8a060; }
+    .pm-link-edit:hover { background: #fdf5e6; }
+    .pm-link-atlas { background: #1c1c1c; color: #f0ede6; border-color: transparent; }
+    .pm-link-atlas:hover { background: #333; color: #f0ede6; }
+    .pm-link-card { background: #f7f5f1; color: #555; }
+
+    /* ---- Bottom strip ---- */
+    #pm-footer {
+      height: 46px;
+      flex-shrink: 0;
+      background: #111;
+      border-top: 1px solid #000;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 18px;
+      color: #888;
+      overflow: hidden;
+    }
+
+    .pm-footer-coords {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 12px;
+      color: #bbb;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .pm-footer-sep {
+      width: 1px;
+      height: 18px;
+      background: #333;
+      flex-shrink: 0;
+    }
+
+    .pm-footer-ref {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: #666;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .pm-footer-area {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: #666;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .pm-footer-band {
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .pm-footer-spacer { flex: 1; }
+
+    .pm-footer-atlas {
+      font-size: 12px;
+      font-weight: 500;
+      color: #f0ede6;
+      background: #2e2e2e;
+      border: 1px solid #444;
+      border-radius: 2px;
+      padding: 4px 12px;
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.1s;
+    }
+    .pm-footer-atlas:hover { background: #444; text-decoration: none; color: #f0ede6; }
+
+    /* ---- Loading / error overlays ---- */
+    #pm-overlay {
+      position: fixed;
+      inset: 0;
+      background: #1c1c1c;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #aaa;
+      font-size: 15px;
+      z-index: 999;
+    }
+
+    .pm-overlay-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #f0ede6;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loading overlay — removed on render -->
+  <div id="pm-overlay">
+    <div class="pm-overlay-brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 90" width="14" height="21" fill="currentColor">
+        <path d="M8,4 L10,0 L21,0 L32,9 L32,29 L35,38 L59,61 L57,77 L35,81 L13,81 L4,87 L8,77 L7,72 L13,63 L12,55 L23,47 L20,42 L3,34 L9,26 L0,20 Z"/>
+      </svg>
+      Industrial Atlas UK
+    </div>
+    <span id="pm-overlay-msg">Loading property…</span>
+  </div>
+
+  <header id="pm-header" style="display:none">
+    <div class="pm-brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 90" width="10" height="15" fill="currentColor">
+        <path d="M8,4 L10,0 L21,0 L32,9 L32,29 L35,38 L59,61 L57,77 L35,81 L13,81 L4,87 L8,77 L7,72 L13,63 L12,55 L23,47 L20,42 L3,34 L9,26 L0,20 Z"/>
+      </svg>
+      <span class="pm-brand-name">Industrial Atlas UK</span>
+    </div>
+    <div class="pm-property-info">
+      <span id="pm-type-badge" class="pm-type-badge"></span>
+      <span id="pm-lc-pill" class="pm-lc-pill" hidden></span>
+      <span id="pm-prop-name" class="pm-prop-name"></span>
+      <span id="pm-area-badge" class="pm-area-badge" hidden></span>
+    </div>
+    <div class="pm-header-links">
+      <a id="pm-card-link" class="pm-hlink" href="">← Property Card</a>
+      <a id="pm-osm-link" class="pm-hlink" href="" target="_blank" rel="noopener">OSM ↗</a>
+    </div>
+  </header>
+
+  <div id="pm-body" style="display:none">
+    <aside id="pm-left">
+      <div class="pm-panel-section">
+        <div class="pm-panel-head">Opportunity Score</div>
+        <div class="pm-score-block">
+          <div id="pm-score-num" class="pm-score-num"></div>
+          <div class="pm-score-meta">
+            <div id="pm-score-band" class="pm-score-band"></div>
+            <div id="pm-score-conf" class="pm-score-conf"></div>
+          </div>
+        </div>
+        <div class="pm-score-bar-wrap">
+          <div id="pm-score-bar" class="pm-score-bar"></div>
+        </div>
+        <div id="pm-signals" class="pm-signals"></div>
+        <div class="pm-disclaimer">Score based on OSM tags only. Does not confirm vacancy.</div>
+      </div>
+    </aside>
+
+    <div id="pm-map-wrap">
+      <div id="pm-map"></div>
+    </div>
+
+    <aside id="pm-right">
+      <div class="pm-panel-section">
+        <div class="pm-panel-head">OSM Tags</div>
+        <div id="pm-tags"></div>
+      </div>
+      <div class="pm-panel-section" style="flex:1">
+        <div class="pm-panel-head">Links</div>
+        <div id="pm-links"></div>
+      </div>
+    </aside>
+  </div>
+
+  <footer id="pm-footer" style="display:none">
+    <span id="pm-coords" class="pm-footer-coords"></span>
+    <div class="pm-footer-sep"></div>
+    <span id="pm-osmref" class="pm-footer-ref"></span>
+    <div class="pm-footer-sep"></div>
+    <span id="pm-area-foot" class="pm-footer-area" hidden></span>
+    <span id="pm-band-foot" class="pm-footer-band"></span>
+    <div class="pm-footer-spacer"></div>
+    <a id="pm-atlas-link" class="pm-footer-atlas" href="">▦ Open in Atlas</a>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="overpass.js"></script>
+  <script src="scoring.js"></script>
+  <script>
+    'use strict';
+
+    const FEATURE_STYLES = {
+      workshops:            { color: '#b35c00', label: 'Workshop / Craft' },
+      manufacturing:        { color: '#1a3a5c', label: 'Manufacturing' },
+      industrial_buildings: { color: '#2c2c2c', label: 'Industrial Building' },
+      warehouses:           { color: '#5c5c5c', label: 'Warehouse' },
+      maker_spaces:         { color: '#2d6a4f', label: 'Maker Space' },
+      railway_arches:       { color: '#4a4a8a', label: 'Railway Arch' },
+      other:                { color: '#888888', label: 'Industrial' },
+    };
+
+    const LC_STYLES = {
+      abandoned: { bg: '#3d1a0a', color: '#f4b088', border: '#7a3010' },
+      disused:   { bg: '#1a1a3d', color: '#9898e8', border: '#30307a' },
+      vacant:    { bg: '#1a3d20', color: '#88c89a', border: '#2d7040' },
+    };
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function fmtArea(m2) {
+      return m2 >= 10000
+        ? `${(m2 / 10000).toFixed(1)} ha`
+        : `${Math.round(m2).toLocaleString()} m²`;
+    }
+
+    function $(id) { return document.getElementById(id); }
+
+    async function fetchElement(type, id) {
+      const q = type === 'node'
+        ? `[out:json];node(${id});out meta;`
+        : `[out:json];${type}(${id});out geom meta;`;
+      const r = await fetch(
+        'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q)
+      );
+      if (!r.ok) throw new Error(`Overpass HTTP ${r.status}`);
+      const data = await r.json();
+      if (!data.elements?.length) throw new Error('Element not found in OSM');
+      return data.elements[0];
+    }
+
+    function render(el, type, id) {
+      const tags        = el.tags || {};
+      const featureType = Overpass.classify(tags);
+      const name        = Overpass.displayName(el) || featureType.replace(/_/g, ' ');
+      const style       = FEATURE_STYLES[featureType] || FEATURE_STYLES.other;
+      const lifecycle   = Overpass.lifecycleStatus(tags);
+      const sr          = Scoring.score(el, []);
+
+      let lat = null, lon = null;
+      if (el.type === 'node') {
+        lat = el.lat; lon = el.lon;
+      } else if (el.geometry?.length) {
+        const c = Overpass.centroid(el.geometry);
+        if (c) { lat = c.lat; lon = c.lon; }
+      }
+
+      const osmUrl   = `https://www.openstreetmap.org/${el.type}/${el.id}`;
+      const osmEdit  = `https://www.openstreetmap.org/edit?${el.type}=${el.id}`;
+      const gmUrl    = lat != null ? `https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
+      const svUrl    = lat != null ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
+      const atlasUrl = lat != null ? `index.html#v=${lat.toFixed(4)},${lon.toFixed(4)},17` : 'index.html';
+      const cardUrl  = `property.html#${type}/${id}`;
+
+      document.title = `${name} — Industrial Atlas UK`;
+
+      /* ---- Header ---- */
+      $('pm-prop-name').textContent = name;
+
+      const typeBadge = $('pm-type-badge');
+      typeBadge.textContent = style.label;
+      typeBadge.style.background = style.color;
+
+      if (lifecycle) {
+        const lc = $('pm-lc-pill');
+        const ls = LC_STYLES[lifecycle] || {};
+        lc.textContent = lifecycle.toUpperCase();
+        lc.style.background = ls.bg || '#333';
+        lc.style.color      = ls.color || '#fff';
+        lc.style.border     = `1px solid ${ls.border || '#666'}`;
+        lc.hidden = false;
+      }
+
+      if (sr.areaM2 > 0) {
+        const ab = $('pm-area-badge');
+        ab.textContent = fmtArea(sr.areaM2);
+        ab.hidden = false;
+      }
+
+      $('pm-card-link').href = cardUrl;
+      $('pm-osm-link').href  = osmUrl;
+
+      /* ---- Left: score ---- */
+      $('pm-score-num').textContent  = sr.score;
+      $('pm-score-num').style.color  = sr.color;
+      $('pm-score-band').textContent = sr.classification;
+      $('pm-score-band').style.color = sr.color;
+      $('pm-score-conf').textContent = `confidence ${sr.confidence}`;
+      $('pm-score-bar').style.width      = `${Math.max(3, sr.score)}%`;
+      $('pm-score-bar').style.background = sr.color;
+
+      $('pm-signals').innerHTML = sr.signals.length
+        ? sr.signals.map(sig => {
+            const cls   = sig.delta > 0 ? 'pm-sig-pos' : 'pm-sig-neg';
+            const arrow = sig.delta > 0 ? '▲' : '▼';
+            const fmt   = sig.delta > 0 ? `+${sig.delta}` : `${sig.delta}`;
+            return `<div class="pm-signal ${cls}">
+              <span class="pm-sig-arrow">${arrow}</span>
+              <span class="pm-sig-delta">${fmt}</span>
+              <span class="pm-sig-text">${esc(sig.text)}</span>
+            </div>`;
+          }).join('')
+        : '<div style="color:#aaa;font-size:11px;font-style:italic">No scoring signals</div>';
+
+      /* ---- Right: tags ---- */
+      $('pm-tags').innerHTML = Object.entries(tags).map(([k, v]) =>
+        `<div class="pm-tag-row">` +
+        `<span class="pm-tag-key">${esc(k)}</span>` +
+        `<span class="pm-tag-eq">=</span>` +
+        `<span class="pm-tag-val">${esc(v)}</span>` +
+        `</div>`
+      ).join('') || '<span style="color:#aaa;font-size:11px">No tags</span>';
+
+      /* ---- Right: links ---- */
+      const linksHtml = [
+        `<a class="pm-link" href="${osmUrl}" target="_blank" rel="noopener">View on OpenStreetMap ↗</a>`,
+        `<a class="pm-link pm-link-edit" href="${osmEdit}" target="_blank" rel="noopener">Edit in OSM iD ↗</a>`,
+        gmUrl ? `<a class="pm-link" href="${gmUrl}" target="_blank" rel="noopener">Google Maps ↗</a>` : '',
+        svUrl ? `<a class="pm-link" href="${svUrl}" target="_blank" rel="noopener">Street View ↗</a>` : '',
+        `<a class="pm-link pm-link-card" href="${cardUrl}">← Property Card</a>`,
+        `<a class="pm-link pm-link-atlas" href="${atlasUrl}">▦ Open in Atlas</a>`,
+      ].filter(Boolean).join('');
+      $('pm-links').innerHTML = linksHtml;
+
+      /* ---- Footer ---- */
+      if (lat != null) {
+        $('pm-coords').textContent = `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      }
+      $('pm-osmref').textContent  = `osm.org/${el.type}/${el.id}`;
+      $('pm-band-foot').textContent  = sr.classification;
+      $('pm-band-foot').style.color  = sr.color;
+      if (sr.areaM2 > 0) {
+        const af = $('pm-area-foot');
+        af.textContent = fmtArea(sr.areaM2);
+        af.hidden = false;
+        /* insert separator before area */
+        af.insertAdjacentHTML('beforebegin', '<div class="pm-footer-sep" style="width:1px;height:18px;background:#333;flex-shrink:0"></div>');
+      }
+      $('pm-atlas-link').href = atlasUrl;
+
+      /* ---- Show UI ---- */
+      $('pm-overlay').remove();
+      $('pm-header').style.display = '';
+      $('pm-body').style.display   = '';
+      $('pm-footer').style.display = '';
+
+      /* ---- Map ---- */
+      if (lat !== null) {
+        const map = L.map('pm-map', {
+          zoomControl: true,
+          attributionControl: true,
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+        }).addTo(map);
+
+        let zoom = 17;
+        if      (sr.areaM2 > 80000) zoom = 14;
+        else if (sr.areaM2 > 15000) zoom = 15;
+        else if (sr.areaM2 > 3000)  zoom = 16;
+
+        map.setView([lat, lon], zoom);
+
+        if (el.geometry?.length >= 3) {
+          L.polygon(el.geometry.map(p => [p.lat, p.lon]), {
+            color: style.color, weight: 2.5,
+            fillColor: style.color, fillOpacity: 0.18,
+          }).addTo(map);
+        }
+
+        L.marker([lat, lon], {
+          icon: L.divIcon({
+            className: '',
+            html: `<div style="width:18px;height:18px;background:${style.color};border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.5)"></div>`,
+            iconSize: [18, 18], iconAnchor: [9, 9],
+          }),
+        }).bindPopup(`<strong>${esc(name)}</strong><br>${style.label}`).addTo(map);
+
+        setTimeout(() => map.invalidateSize(), 80);
+      }
+    }
+
+    async function init() {
+      const hash = window.location.hash.slice(1);
+      const m    = hash.match(/^(node|way|relation)\/(\d+)$/);
+
+      if (!m) {
+        $('pm-overlay-msg').innerHTML =
+          'No property specified. Open a feature in the ' +
+          '<a href="index.html" style="color:#8ab0d0">Industrial Atlas</a> ' +
+          'and click <em>Map View</em>.';
+        return;
+      }
+
+      const [, type, id] = m;
+
+      try {
+        const el = await fetchElement(type, id);
+        render(el, type, id);
+      } catch (err) {
+        $('pm-overlay-msg').innerHTML =
+          `Could not load property: ${esc(err.message)}<br>` +
+          `<a href="index.html" style="color:#8ab0d0;margin-top:8px;display:inline-block">← Back to Industrial Atlas</a>`;
+      }
+    }
+
+    init();
+  </script>
+
+</body>
+</html>
