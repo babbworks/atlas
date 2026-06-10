@@ -3,5 +3,12 @@
 *.accdb
 *.mdb
 
+# VOA monolithic file — browser uses split data/voa/ files instead
+data/voa_industrial.json
+
+# Cloudflare Worker tooling
+inspire-proxy/node_modules/
+inspire-proxy/.wrangler/
+
 # macOS
 .DS_Store

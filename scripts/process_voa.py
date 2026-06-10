@@ -40,6 +40,7 @@ Industrial primary description codes (I*):
 
 import sys
 import os
+import re
 import zipfile
 import json
 import collections
@@ -47,7 +48,8 @@ import time
 
 SCRIPT_DIR  = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
-OUTPUT_PATH = os.path.join(PROJECT_DIR, 'data', 'voa_industrial.json')
+OUTPUT_DIR  = os.path.join(PROJECT_DIR, 'data', 'voa')
+OUTPUT_PATH = os.path.join(PROJECT_DIR, 'data', 'voa_industrial.json')  # legacy, kept for reference
 
 # Friendly labels for description codes shown in the UI
 CODE_LABELS = {
@@ -143,15 +145,25 @@ def process(zip_path):
     print(f'\nDone: {total:,} total rows, {industrial:,} industrial, {skipped} skipped ({elapsed:.0f}s)')
     print(f'Unique postcodes: {len(by_postcode):,}')
 
-    print(f'Writing {OUTPUT_PATH} …')
-    os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    with open(OUTPUT_PATH, 'w', encoding='utf-8') as out:
-        json.dump(dict(by_postcode), out, separators=(',', ':'))
+    # Group by postcode area (leading letters, e.g. "SW" from "SW1A 2AA")
+    def _area(pc):
+        m = re.match(r'^([A-Z]+)', pc)
+        return m.group(1) if m else 'XX'
 
-    size_mb = os.path.getsize(OUTPUT_PATH) / 1_000_000
-    print(f'Written: {size_mb:.1f} MB')
-    print(f'\nPlace voa_industrial.json in data/ — already done.')
-    print('Restart server.py and reload the app.')
+    by_area = collections.defaultdict(dict)
+    for pc, entries in by_postcode.items():
+        by_area[_area(pc)][pc] = entries
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    total_bytes = 0
+    for area, chunk in sorted(by_area.items()):
+        path = os.path.join(OUTPUT_DIR, f'{area}.json')
+        with open(path, 'w', encoding='utf-8') as out:
+            json.dump(chunk, out, separators=(',', ':'))
+        total_bytes += os.path.getsize(path)
+
+    print(f'Written {len(by_area)} area files to data/voa/ ({total_bytes/1_000_000:.1f} MB total)')
+    print('Place the data/voa/ directory alongside index.html and reload the app.')
 
 
 if __name__ == '__main__':

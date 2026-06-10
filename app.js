@@ -308,7 +308,8 @@ const App = (() => {
     const gmUrl   = lat != null ? `https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
     const svUrl   = lat != null ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
 
-    const tagRows = Object.entries(tags)
+    const tagEntries = Object.entries(tags);
+    const tagRows = tagEntries
       .map(([k, v]) =>
         `<div class="tag-row">` +
         `<span class="tag-key">${_esc(k)}</span>` +
@@ -363,8 +364,12 @@ const App = (() => {
       </div>
 
       <div class="feature-tags">
-        <div class="feature-tags-title">OSM Tags</div>
-        ${tagRows || '<div style="color:#aaa;font-size:12px">No tags recorded</div>'}
+        <div class="feature-tags-title">OSM Tags
+          ${tagEntries.length > 0 ? `<button class="tags-toggle" id="tags-toggle">show ${tagEntries.length} ▼</button>` : ''}
+        </div>
+        <div id="tags-body" hidden>
+          ${tagRows || '<div style="color:#aaa;font-size:12px">No tags recorded</div>'}
+        </div>
       </div>
       <div class="feature-links">
         <a class="feature-link" href="${osmUrl}" target="_blank" rel="noopener">View on OpenStreetMap ↗</a>
@@ -372,14 +377,29 @@ const App = (() => {
         ${gmUrl ? `<a class="feature-link" href="${gmUrl}" target="_blank" rel="noopener">Open in Google Maps ↗</a>` : ''}
         ${svUrl ? `<a class="feature-link" href="${svUrl}" target="_blank" rel="noopener">Street View ↗</a>` : ''}
       </div>
-      <button class="btn-postcard" id="btn-create-postcard">⬡ Create Shareable Card</button>
+      <div class="share-actions">
+        <a class="btn-share-page" href="property.html#${el.type}/${el.id}" target="_blank" rel="noopener">⎘ Property</a>
+        <a class="btn-share-page btn-share-map" href="property-map.html#${el.type}/${el.id}" target="_blank" rel="noopener">⊞ Map</a>
+        <button class="btn-postcard" id="btn-create-postcard">⬡ Card</button>
+      </div>
       <div id="companies-section" class="companies-section"></div>
       <div id="voa-section" class="voa-section"></div>`;
 
     showPanel('panel-feature');
 
     document.getElementById('btn-create-postcard')
-      .addEventListener('click', () => _openPostcard(el));
+      .addEventListener('click', () => _openCardPicker(el));
+
+    const tagsToggle = document.getElementById('tags-toggle');
+    const tagsBody   = document.getElementById('tags-body');
+    if (tagsToggle && tagsBody) {
+      tagsToggle.addEventListener('click', () => {
+        tagsBody.hidden = !tagsBody.hidden;
+        tagsToggle.textContent = tagsBody.hidden
+          ? `show ${tagEntries.length} ▼`
+          : `hide ▲`;
+      });
+    }
 
     _loadCompanies(tags);
     _loadVOA(tags);
@@ -920,6 +940,300 @@ const App = (() => {
     const filters = MODES[modeId];
     if (filters) { setFilters(filters); state.currentMode = modeId; }
     else { state.currentMode = null; }
+  }
+
+  /* ---- Card format picker -------------------------------- */
+  function _openCardPicker(el) {
+    document.querySelector('.card-picker-overlay')?.remove();
+
+    const picker = document.createElement('div');
+    picker.className = 'card-picker-overlay';
+    picker.innerHTML = `
+      <div class="card-picker-modal">
+        <div class="card-picker-title">Choose card format</div>
+        <button class="card-picker-opt" id="cpo-wide">
+          <div class="cpo-thumb cpo-thumb-wide"></div>
+          <div class="cpo-info">
+            <span class="cpo-name">Detailed</span>
+            <span class="cpo-desc">1200 × 630 · Full data card with sidebar</span>
+          </div>
+        </button>
+        <button class="card-picker-opt" id="cpo-square">
+          <div class="cpo-thumb cpo-thumb-square"></div>
+          <div class="cpo-info">
+            <span class="cpo-name">Square</span>
+            <span class="cpo-desc">1080 × 1080 · Instagram / bold format</span>
+          </div>
+        </button>
+        <button class="card-picker-opt" id="cpo-landscape">
+          <div class="cpo-thumb cpo-thumb-landscape"></div>
+          <div class="cpo-info">
+            <span class="cpo-name">Landscape 16:9</span>
+            <span class="cpo-desc">1200 × 675 · Twitter / X / LinkedIn</span>
+          </div>
+        </button>
+        <button class="card-picker-cancel" id="cpo-cancel">Cancel</button>
+      </div>`;
+
+    document.body.appendChild(picker);
+
+    picker.querySelector('#cpo-wide').addEventListener('click', () => { picker.remove(); _openPostcard(el); });
+    picker.querySelector('#cpo-square').addEventListener('click', () => { picker.remove(); _openMinimalCard(el, 'square'); });
+    picker.querySelector('#cpo-landscape').addEventListener('click', () => { picker.remove(); _openMinimalCard(el, 'landscape'); });
+    picker.querySelector('#cpo-cancel').addEventListener('click', () => picker.remove());
+    picker.addEventListener('click', e => { if (e.target === picker) picker.remove(); });
+  }
+
+  /* ---- Minimal card: square + 16:9 ---------------------- */
+  function _buildMinimalCard(el, sr, format) {
+    const tags      = el.tags || {};
+    const type      = Overpass.classify(tags);
+    const name      = Overpass.displayName(el) || type.replace(/_/g, ' ');
+    const style     = MapModule.FEATURE_STYLES[type] || MapModule.FEATURE_STYLES.other;
+    const lifecycle = Overpass.lifecycleStatus(tags);
+
+    let lat = null, lon = null;
+    if (el.type === 'node') { lat = el.lat; lon = el.lon; }
+    else if (el.geometry?.length) {
+      lat = el.geometry.reduce((s, p) => s + p.lat, 0) / el.geometry.length;
+      lon = el.geometry.reduce((s, p) => s + p.lon, 0) / el.geometry.length;
+    }
+
+    const coordStr = lat !== null
+      ? `${Math.abs(lat).toFixed(4)}\u00b0${lat >= 0 ? 'N' : 'S'}\u2002${Math.abs(lon).toFixed(4)}\u00b0${lon >= 0 ? 'E' : 'W'}`
+      : '';
+    const areaStr = sr.areaM2 > 0
+      ? (sr.areaM2 >= 10000 ? `${(sr.areaM2 / 10000).toFixed(1)} ha` : `${Math.round(sr.areaM2).toLocaleString()} m\u00b2`)
+      : '';
+    const operator = tags.operator || tags.brand || '';
+
+    const sq     = format === 'square';
+    const W      = sq ? 1080 : 1200;
+    const H      = sq ? 1080 : 675;
+    const mapDivId = 'pc-min-map';
+    const barPct = Math.max(4, sr.score);
+
+    const ukSvg = (w, h) =>
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 90" width="${w}" height="${h}"
+        fill="currentColor" style="vertical-align:middle;margin-right:6px">
+        <path d="M8,4 L10,0 L21,0 L32,9 L32,29 L35,38 L59,61 L57,77 L35,81 L13,81 L4,87 L8,77 L7,72 L13,63 L12,55 L23,47 L20,42 L3,34 L9,26 L0,20 Z"/>
+      </svg>`;
+
+    const lcPill = lifecycle
+      ? `<span style="display:inline-block;background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.22);border-radius:2px;font-size:${sq ? 12 : 10}px;font-weight:700;letter-spacing:0.06em;padding:2px 8px;color:#f0ede6;vertical-align:middle">${lifecycle.toUpperCase()}</span>`
+      : '';
+
+    let html;
+
+    if (sq) {
+      /* Square: full-bleed map, bottom overlay with name + score + coords + ref */
+      html = `<div id="postcard-canvas-min" style="
+          width:${W}px;height:${H}px;position:relative;overflow:hidden;
+          background:#0b1209;font-family:'IBM Plex Sans',system-ui,sans-serif;flex-shrink:0">
+
+        <div id="${mapDivId}" style="position:absolute;inset:0;z-index:0"></div>
+
+        <div style="position:absolute;top:0;left:0;right:0;height:170px;z-index:10;
+          background:linear-gradient(to bottom,rgba(11,18,9,0.88) 0%,transparent 100%);
+          display:flex;align-items:flex-start;padding:26px 32px;
+          justify-content:space-between;box-sizing:border-box;z-index:10">
+          <span style="color:#f0ede6;font-size:15px;font-weight:600;letter-spacing:0.05em;opacity:0.75;white-space:nowrap">
+            ${ukSvg(11, 17)}INDUSTRIAL ATLAS UK</span>
+          <span style="background:${style.color};color:#fff;font-size:13px;font-weight:600;padding:5px 14px;border-radius:2px;flex-shrink:0;margin-left:12px">${_esc(style.label)}</span>
+        </div>
+
+        <div style="position:absolute;bottom:0;left:0;right:0;
+          padding:260px 40px 46px;
+          background:linear-gradient(to top,rgba(11,18,9,0.97) 55%,transparent 100%);
+          box-sizing:border-box;z-index:10">
+          <div style="font-size:50px;font-weight:700;color:#f0ede6;line-height:1.1;word-break:break-word">${_esc(name)}</div>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px">
+            <span style="font-size:40px;font-weight:700;color:${sr.color};line-height:1">${sr.score}</span>
+            <span style="font-size:17px;font-weight:600;color:${sr.color};opacity:0.9">${_esc(sr.classification)}</span>
+            ${lcPill}
+          </div>
+          <div style="width:${barPct}%;max-width:260px;height:3px;background:${sr.color};border-radius:2px;margin-top:10px;opacity:0.65"></div>
+          ${coordStr ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:17px;color:#888;margin-top:16px">${_esc(coordStr)}</div>` : ''}
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#444;margin-top:6px">osm.org/${_esc(el.type)}/${el.id}</div>
+          <div style="font-size:11px;color:#2e2e2e;margin-top:8px">\u00a9 OpenStreetMap contributors, ODbL</div>
+        </div>
+      </div>`;
+    } else {
+      /* Landscape 16:9: map on left, dark info panel on right */
+      const panelW = 300;
+      html = `<div id="postcard-canvas-min" style="
+          width:${W}px;height:${H}px;position:relative;overflow:hidden;
+          background:#0b1209;font-family:'IBM Plex Sans',system-ui,sans-serif;flex-shrink:0">
+
+        <div id="${mapDivId}" style="position:absolute;inset:0;right:${panelW}px;z-index:0"></div>
+
+        <div style="position:absolute;top:0;left:0;right:${panelW}px;height:80px;
+          background:linear-gradient(to bottom,rgba(11,18,9,0.78) 0%,transparent 100%);
+          display:flex;align-items:flex-start;padding:18px 22px;box-sizing:border-box;z-index:10">
+          <span style="color:#f0ede6;font-size:13px;font-weight:600;letter-spacing:0.05em;opacity:0.72;white-space:nowrap">
+            ${ukSvg(9, 13)}INDUSTRIAL ATLAS UK</span>
+        </div>
+
+        <div style="position:absolute;top:0;right:0;bottom:0;width:${panelW}px;
+          background:rgba(11,18,9,0.97);border-left:1px solid rgba(255,255,255,0.06);
+          padding:22px 20px 18px;box-sizing:border-box;z-index:10;
+          display:flex;flex-direction:column;overflow:hidden">
+
+          <span style="background:${style.color};color:#fff;font-size:11px;font-weight:600;
+            padding:4px 10px;border-radius:2px;display:inline-block;align-self:flex-start;
+            margin-bottom:14px">${_esc(style.label)}</span>
+
+          <div style="font-size:24px;font-weight:700;color:#f0ede6;line-height:1.2;
+            word-break:break-word;margin-bottom:${lifecycle || operator ? 8 : 14}px">${_esc(name)}</div>
+
+          ${lifecycle ? `<div style="margin-bottom:8px">${lcPill}</div>` : ''}
+          ${operator ? `<div style="font-size:12px;color:#666;margin-bottom:10px">${_esc(operator)}</div>` : ''}
+
+          <div style="border-top:1px solid rgba(255,255,255,0.06);margin-bottom:14px"></div>
+
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px">
+            <span style="font-size:42px;font-weight:700;color:${sr.color};line-height:1">${sr.score}</span>
+            <span style="font-size:13px;font-weight:600;color:${sr.color};opacity:0.88">${_esc(sr.classification)}</span>
+          </div>
+          <div style="height:3px;background:rgba(255,255,255,0.07);border-radius:2px;margin-bottom:6px;overflow:hidden">
+            <div style="width:${barPct}%;height:3px;background:${sr.color};border-radius:2px"></div>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#444;margin-bottom:16px">confidence ${sr.confidence}</div>
+
+          <div style="border-top:1px solid rgba(255,255,255,0.06);margin-bottom:14px"></div>
+
+          ${areaStr ? `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+            <span style="font-size:10.5px;color:#4a4a4a">Area</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#888">${_esc(areaStr)}</span>
+          </div>` : ''}
+
+          ${coordStr ? `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+            <span style="font-size:10.5px;color:#4a4a4a;flex-shrink:0">Location</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#888;text-align:right">${_esc(coordStr)}</span>
+          </div>` : ''}
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+            <span style="font-size:10.5px;color:#4a4a4a">OSM ref</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#555">
+              ${_esc(el.type)}/${el.id}</span>
+          </div>
+
+          <div style="margin-top:auto;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06)">
+            <div style="font-size:9.5px;color:#2e2e2e">\u00a9 OpenStreetMap contributors, ODbL</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    return { W, H, lat, lon, style, sr, mapDivId, html };
+  }
+
+  function _openMinimalCard(el, format) {
+    const sr = Scoring.score(el, state.lastResults);
+    const card = _buildMinimalCard(el, sr, format);
+
+    document.querySelector('.postcard-modal-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'postcard-modal-overlay';
+
+    const scale = Math.min((window.innerWidth - 48) / card.W, (window.innerHeight - 110) / card.H, 1);
+    const wPx   = Math.round(card.W * scale);
+    const hPx   = Math.round(card.H * scale);
+
+    overlay.innerHTML = `
+      <div class="postcard-scale-wrapper" id="pc-scale-wrap" style="width:${wPx}px;height:${hPx}px">
+        ${card.html}
+      </div>
+      <div class="postcard-modal-actions">
+        <button class="postcard-modal-btn" id="pc-close">✕ Close</button>
+        <button class="postcard-modal-btn pc-primary" id="pc-download">↓ Download PNG</button>
+      </div>`;
+
+    document.body.appendChild(overlay);
+
+    const canvas = overlay.querySelector('#postcard-canvas-min');
+    canvas.style.transformOrigin = 'top left';
+    canvas.style.transform       = `scale(${scale})`;
+
+    let minMap = null;
+    if (card.lat !== null) {
+      const tags = el.tags || {};
+      const type = Overpass.classify(tags);
+      const col  = (MapModule.FEATURE_STYLES[type] || MapModule.FEATURE_STYLES.other).color;
+
+      let zoom = 17;
+      if      (sr.areaM2 > 80000) zoom = 14;
+      else if (sr.areaM2 > 15000) zoom = 15;
+      else if (sr.areaM2 > 3000)  zoom = 16;
+
+      minMap = L.map(card.mapDivId, {
+        zoomControl: false, attributionControl: false,
+        dragging: false, touchZoom: false,
+        scrollWheelZoom: false, doubleClickZoom: false,
+        boxZoom: false, keyboard: false,
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, crossOrigin: 'anonymous',
+      }).addTo(minMap);
+      minMap.setView([card.lat, card.lon], zoom);
+
+      if (el.geometry?.length >= 3) {
+        L.polygon(el.geometry.map(p => [p.lat, p.lon]), {
+          color: col, weight: 2.5, fillColor: col, fillOpacity: 0.22, interactive: false,
+        }).addTo(minMap);
+      }
+      L.marker([card.lat, card.lon], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="width:22px;height:22px;background:${col};border:3px solid #fff;border-radius:50%;box-shadow:0 2px 12px rgba(0,0,0,0.7)"></div>`,
+          iconSize: [22, 22], iconAnchor: [11, 11],
+        }),
+        interactive: false,
+      }).addTo(minMap);
+
+      setTimeout(() => { if (minMap) minMap.invalidateSize(); }, 80);
+    }
+
+    async function _captureMin() {
+      canvas.style.transform = 'none';
+      try {
+        await new Promise(r => setTimeout(r, 400));
+        return await html2canvas(canvas, {
+          width: card.W, height: card.H, scale: 1,
+          useCORS: true, allowTaint: false,
+          backgroundColor: '#0b1209', logging: false, imageTimeout: 10000,
+        });
+      } finally {
+        canvas.style.transform = `scale(${scale})`;
+      }
+    }
+
+    overlay.querySelector('#pc-close').addEventListener('click', () => {
+      minMap && minMap.remove();
+      overlay.remove();
+    });
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) { minMap && minMap.remove(); overlay.remove(); }
+    });
+
+    overlay.querySelector('#pc-download').addEventListener('click', async () => {
+      const btn = overlay.querySelector('#pc-download');
+      btn.textContent = '… Rendering'; btn.disabled = true;
+      try {
+        const cvs  = await _captureMin();
+        const link = document.createElement('a');
+        const slug = (Overpass.displayName(el) || String(el.id)).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40);
+        link.download = `industrial-atlas-${format}-${slug}.png`;
+        link.href     = cvs.toDataURL('image/png');
+        link.click();
+      } catch (err) {
+        console.error('[MinCard]', err);
+        toast('Could not render: ' + err.message, 5000);
+      } finally {
+        btn.textContent = '↓ Download PNG'; btn.disabled = false;
+      }
+    });
   }
 
   /* ---- Postcard: export-only vector background SVG ------ */
@@ -1476,7 +1790,6 @@ const App = (() => {
   /* ---- Init --------------------------------------------- */
   function init() {
     _checkProtocol();
-    VOA.preload();
     VOAGeo.preload();
 
     MapModule.init({
@@ -1693,6 +2006,13 @@ const App = (() => {
       $('btn-sort-score').classList.remove('active');
       $('btn-sort-score').textContent = '↕ Score';
       _renderResultsList(state.lastResults);
+    });
+
+    /* Collapsible sidebar sections */
+    qa('.section-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.closest('.sidebar-section').classList.toggle('collapsed');
+      });
     });
 
     /* Mobile sidebar toggles */
