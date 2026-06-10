@@ -378,7 +378,7 @@ const App = (() => {
         ${svUrl ? `<a class="feature-link" href="${svUrl}" target="_blank" rel="noopener">Street View ↗</a>` : ''}
       </div>
       <div class="share-actions">
-        <a class="btn-share-page" href="property.html#${el.type}/${el.id}" target="_blank" rel="noopener">⎘ Property</a>
+        <a class="btn-share-page" href="property.html?from=${encodeURIComponent(window.location.hash)}#${el.type}/${el.id}" target="_blank" rel="noopener">⎘ Property</a>
         <a class="btn-share-page btn-share-map" href="property-map.html#${el.type}/${el.id}" target="_blank" rel="noopener">⊞ Map</a>
         <button class="btn-postcard" id="btn-create-postcard">⬡ Card</button>
       </div>

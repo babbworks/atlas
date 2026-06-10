@@ -461,6 +461,12 @@
     }
 
     async function init() {
+      /* Restore atlas state in the back link if we came from there */
+      const fromParam = new URLSearchParams(window.location.search).get('from');
+      if (fromParam) {
+        document.querySelector('.prop-back').href = 'index.html' + fromParam;
+      }
+
       const hash = window.location.hash.slice(1);
       const m    = hash.match(/^(node|way|relation)\/(\d+)$/);
 
