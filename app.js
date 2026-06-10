@@ -1051,11 +1051,12 @@ const App = (() => {
     if (sq) {
       /* Square: full-bleed map, bottom overlay with name + score + coords + ref */
       const msgColHtml = message
-        ? `<div style="flex:0 0 auto;max-width:300px;padding-left:32px;
+        ? `<div style="flex:0 0 580px;padding-left:36px;padding-right:8px;
             border-left:1px solid rgba(255,255,255,0.1);
-            display:flex;align-items:center">
+            display:flex;align-items:center;justify-content:flex-end">
             <span style="font-size:22px;font-weight:500;color:rgba(240,237,230,0.82);
-              line-height:1.35;font-style:italic;word-break:break-word">${_esc(message)}</span>
+              line-height:1.35;font-style:italic;word-break:break-word;
+              text-align:right">${_esc(message)}</span>
           </div>`
         : '';
       html = `<div id="postcard-canvas-min" style="
