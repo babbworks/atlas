@@ -532,8 +532,9 @@
       const osmEdit  = `https://www.openstreetmap.org/edit?${el.type}=${el.id}`;
       const gmUrl    = lat != null ? `https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
       const svUrl    = lat != null ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
+      const fromParam = new URLSearchParams(window.location.search).get('from');
       const atlasUrl = lat != null ? `index.html#v=${lat.toFixed(4)},${lon.toFixed(4)},17` : 'index.html';
-      const cardUrl  = `property.html#${type}/${id}`;
+      const cardUrl  = `property.html${fromParam ? `?from=${encodeURIComponent(fromParam)}` : ''}#${type}/${id}`;
 
       document.title = `${name} — Industrial Atlas UK`;
 
@@ -666,13 +667,16 @@
     }
 
     async function init() {
+      const fromParam = new URLSearchParams(window.location.search).get('from');
+      const atlasBack = fromParam ? `index.html${fromParam}` : 'index.html';
+
       const hash = window.location.hash.slice(1);
       const m    = hash.match(/^(node|way|relation)\/(\d+)$/);
 
       if (!m) {
         $('pm-overlay-msg').innerHTML =
           'No property specified. Open a feature in the ' +
-          '<a href="index.html" style="color:#8ab0d0">Industrial Atlas</a> ' +
+          `<a href="${atlasBack}" style="color:#8ab0d0">Industrial Atlas</a> ` +
           'and click <em>Map View</em>.';
         return;
       }
@@ -685,7 +689,7 @@
       } catch (err) {
         $('pm-overlay-msg').innerHTML =
           `Could not load property: ${esc(err.message)}<br>` +
-          `<a href="index.html" style="color:#8ab0d0;margin-top:8px;display:inline-block">← Back to Industrial Atlas</a>`;
+          `<a href="${atlasBack}" style="color:#8ab0d0;margin-top:8px;display:inline-block">← Back to Industrial Atlas</a>`;
       }
     }
 

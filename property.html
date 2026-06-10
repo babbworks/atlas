@@ -375,8 +375,9 @@
       const osmEdit  = `https://www.openstreetmap.org/edit?${el.type}=${el.id}`;
       const gmUrl    = lat != null ? `https://www.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
       const svUrl    = lat != null ? `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat.toFixed(6)},${lon.toFixed(6)}` : null;
+      const fromParam = new URLSearchParams(window.location.search).get('from');
       const atlasUrl = lat != null ? `index.html#v=${lat.toFixed(4)},${lon.toFixed(4)},17` : 'index.html';
-      const mapUrl   = `property-map.html#${type}/${id}`;
+      const mapUrl   = `property-map.html${fromParam ? `?from=${encodeURIComponent(fromParam)}` : ''}#${type}/${id}`;
 
       document.title = `${name} — Industrial Atlas UK`;
 

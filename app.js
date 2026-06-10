@@ -379,7 +379,7 @@ const App = (() => {
       </div>
       <div class="share-actions">
         <a class="btn-share-page" href="property.html?from=${encodeURIComponent(window.location.hash)}#${el.type}/${el.id}" target="_blank" rel="noopener">⎘ Property</a>
-        <a class="btn-share-page btn-share-map" href="property-map.html#${el.type}/${el.id}" target="_blank" rel="noopener">⊞ Map</a>
+        <a class="btn-share-page btn-share-map" href="property-map.html?from=${encodeURIComponent(window.location.hash)}#${el.type}/${el.id}" target="_blank" rel="noopener">⊞ Map</a>
         <button class="btn-postcard" id="btn-create-postcard">⬡ Card</button>
       </div>
       <div id="companies-section" class="companies-section"></div>
@@ -977,15 +977,38 @@ const App = (() => {
 
     document.body.appendChild(picker);
 
+    const showMsgStep = (format) => {
+      const modal = picker.querySelector('.card-picker-modal');
+      const label = format === 'square' ? 'Square' : 'Landscape 16:9';
+      modal.innerHTML = `
+        <div class="card-picker-title">${label} — add a message</div>
+        <textarea class="card-message-input" id="cpo-msg"
+          placeholder="Optional message to include on the card…"
+          rows="3" maxlength="200"></textarea>
+        <div class="cpo-msg-actions">
+          <button class="card-picker-cancel" id="cpo-msg-skip">Skip</button>
+          <button class="cpo-create" id="cpo-msg-create">Create Card →</button>
+        </div>`;
+      const go = () => {
+        const msg = modal.querySelector('#cpo-msg').value.trim();
+        picker.remove();
+        _openMinimalCard(el, format, msg);
+      };
+      modal.querySelector('#cpo-msg-skip').addEventListener('click', () => { picker.remove(); _openMinimalCard(el, format, ''); });
+      modal.querySelector('#cpo-msg-create').addEventListener('click', go);
+      modal.querySelector('#cpo-msg').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); go(); } });
+      setTimeout(() => modal.querySelector('#cpo-msg').focus(), 40);
+    };
+
     picker.querySelector('#cpo-wide').addEventListener('click', () => { picker.remove(); _openPostcard(el); });
-    picker.querySelector('#cpo-square').addEventListener('click', () => { picker.remove(); _openMinimalCard(el, 'square'); });
-    picker.querySelector('#cpo-landscape').addEventListener('click', () => { picker.remove(); _openMinimalCard(el, 'landscape'); });
+    picker.querySelector('#cpo-square').addEventListener('click', () => showMsgStep('square'));
+    picker.querySelector('#cpo-landscape').addEventListener('click', () => showMsgStep('landscape'));
     picker.querySelector('#cpo-cancel').addEventListener('click', () => picker.remove());
     picker.addEventListener('click', e => { if (e.target === picker) picker.remove(); });
   }
 
   /* ---- Minimal card: square + 16:9 ---------------------- */
-  function _buildMinimalCard(el, sr, format) {
+  function _buildMinimalCard(el, sr, format, message = '') {
     const tags      = el.tags || {};
     const type      = Overpass.classify(tags);
     const name      = Overpass.displayName(el) || type.replace(/_/g, ' ');
@@ -1027,6 +1050,14 @@ const App = (() => {
 
     if (sq) {
       /* Square: full-bleed map, bottom overlay with name + score + coords + ref */
+      const msgColHtml = message
+        ? `<div style="flex:0 0 auto;max-width:300px;padding-left:32px;
+            border-left:1px solid rgba(255,255,255,0.1);
+            display:flex;align-items:center">
+            <span style="font-size:22px;font-weight:500;color:rgba(240,237,230,0.82);
+              line-height:1.35;font-style:italic;word-break:break-word">${_esc(message)}</span>
+          </div>`
+        : '';
       html = `<div id="postcard-canvas-min" style="
           width:${W}px;height:${H}px;position:relative;overflow:hidden;
           background:#0b1209;font-family:'IBM Plex Sans',system-ui,sans-serif;flex-shrink:0">
@@ -1036,26 +1067,31 @@ const App = (() => {
         <div style="position:absolute;top:0;left:0;right:0;height:170px;z-index:10;
           background:linear-gradient(to bottom,rgba(11,18,9,0.88) 0%,transparent 100%);
           display:flex;align-items:flex-start;padding:26px 32px;
-          justify-content:space-between;box-sizing:border-box;z-index:10">
+          justify-content:space-between;box-sizing:border-box">
           <span style="color:#f0ede6;font-size:15px;font-weight:600;letter-spacing:0.05em;opacity:0.75;white-space:nowrap">
             ${ukSvg(11, 17)}INDUSTRIAL ATLAS UK</span>
           <span style="background:${style.color};color:#fff;font-size:13px;font-weight:600;padding:5px 14px;border-radius:2px;flex-shrink:0;margin-left:12px">${_esc(style.label)}</span>
         </div>
 
         <div style="position:absolute;bottom:0;left:0;right:0;
-          padding:260px 40px 46px;
-          background:linear-gradient(to top,rgba(11,18,9,0.97) 55%,transparent 100%);
+          padding:180px 40px 46px;
+          background:linear-gradient(to top,rgba(11,18,9,0.97) 45%,transparent 100%);
           box-sizing:border-box;z-index:10">
-          <div style="font-size:50px;font-weight:700;color:#f0ede6;line-height:1.1;word-break:break-word">${_esc(name)}</div>
-          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px">
-            <span style="font-size:40px;font-weight:700;color:${sr.color};line-height:1">${sr.score}</span>
-            <span style="font-size:17px;font-weight:600;color:${sr.color};opacity:0.9">${_esc(sr.classification)}</span>
-            ${lcPill}
+          <div style="display:flex;align-items:flex-end;gap:0">
+            <div style="flex:1 1 0;min-width:0">
+              <div style="font-size:50px;font-weight:700;color:#f0ede6;line-height:1.1;word-break:break-word">${_esc(name)}</div>
+              <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px">
+                <span style="font-size:40px;font-weight:700;color:${sr.color};line-height:1">${sr.score}</span>
+                <span style="font-size:17px;font-weight:600;color:${sr.color};opacity:0.9">${_esc(sr.classification)}</span>
+                ${lcPill}
+              </div>
+              <div style="width:${barPct}%;max-width:260px;height:3px;background:${sr.color};border-radius:2px;margin-top:10px;opacity:0.65"></div>
+              ${coordStr ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:17px;color:#888;margin-top:16px">${_esc(coordStr)}</div>` : ''}
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#444;margin-top:6px">osm.org/${_esc(el.type)}/${el.id}</div>
+              <div style="font-size:11px;color:#2e2e2e;margin-top:8px">\u00a9 OpenStreetMap contributors, ODbL</div>
+            </div>
+            ${msgColHtml}
           </div>
-          <div style="width:${barPct}%;max-width:260px;height:3px;background:${sr.color};border-radius:2px;margin-top:10px;opacity:0.65"></div>
-          ${coordStr ? `<div style="font-family:'IBM Plex Mono',monospace;font-size:17px;color:#888;margin-top:16px">${_esc(coordStr)}</div>` : ''}
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#444;margin-top:6px">osm.org/${_esc(el.type)}/${el.id}</div>
-          <div style="font-size:11px;color:#2e2e2e;margin-top:8px">\u00a9 OpenStreetMap contributors, ODbL</div>
         </div>
       </div>`;
     } else {
@@ -1073,6 +1109,14 @@ const App = (() => {
           <span style="color:#f0ede6;font-size:13px;font-weight:600;letter-spacing:0.05em;opacity:0.72;white-space:nowrap">
             ${ukSvg(9, 13)}INDUSTRIAL ATLAS UK</span>
         </div>
+
+        ${message ? `<div style="position:absolute;bottom:0;left:0;right:${panelW}px;
+          background:rgba(255,255,255,0.93);
+          padding:14px 22px;box-sizing:border-box;z-index:10;
+          font-size:14px;font-weight:500;color:#1a1a1a;line-height:1.45;
+          font-family:'IBM Plex Sans',system-ui,sans-serif">
+          ${_esc(message)}
+        </div>` : ''}
 
         <div style="position:absolute;top:0;right:0;bottom:0;width:${panelW}px;
           background:rgba(11,18,9,0.97);border-left:1px solid rgba(255,255,255,0.06);
@@ -1128,9 +1172,9 @@ const App = (() => {
     return { W, H, lat, lon, style, sr, mapDivId, html };
   }
 
-  function _openMinimalCard(el, format) {
+  function _openMinimalCard(el, format, message = '') {
     const sr = Scoring.score(el, state.lastResults);
-    const card = _buildMinimalCard(el, sr, format);
+    const card = _buildMinimalCard(el, sr, format, message);
 
     document.querySelector('.postcard-modal-overlay')?.remove();
 

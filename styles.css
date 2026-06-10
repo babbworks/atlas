@@ -2253,6 +2253,49 @@ body { display: flex; flex-direction: column; }
 }
 .card-picker-cancel:hover { color: #aaa; border-color: #555; }
 
+.card-message-input {
+  width: 100%;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 3px;
+  color: #f0ede6;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 9px 11px;
+  resize: vertical;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.card-message-input:focus { border-color: #555; }
+.card-message-input::placeholder { color: #444; }
+
+.cpo-msg-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.cpo-msg-actions .card-picker-cancel {
+  flex: 1;
+  margin-top: 0;
+}
+
+.cpo-create {
+  flex: 2;
+  background: #2a4a2a;
+  border: 1px solid #3a6a3a;
+  border-radius: 3px;
+  color: #a8d4a8;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'IBM Plex Sans', sans-serif;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+.cpo-create:hover { background: #335a33; border-color: #4a8a4a; }
+
 /* ---- Property page notes panel --------------------------- */
 #prop-layout {
   display: flex;
